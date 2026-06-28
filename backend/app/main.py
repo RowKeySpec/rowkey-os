@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from app.database import clear_deals, init_db, list_deals, save_deal
 from app.scoring import score_listing
 
 app = FastAPI(title="RowKey OS / Project Titan", version="0.1.0")
@@ -20,11 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "data" / "listings.json"
-DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-if not DATA_PATH.exists():
-    DATA_PATH.write_text("[]", encoding="utf-8")
+init_db()
 
 
 from typing import List
@@ -54,13 +49,28 @@ class Listing(BaseModel):
 
 
 def load_listings() -> List[Dict[str, Any]]:
-    with DATA_PATH.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    return list_deals()
 
 
 def save_listings(listings: List[Dict[str, Any]]) -> None:
-    with DATA_PATH.open("w", encoding="utf-8") as handle:
-        json.dump(listings, handle, indent=2)
+    clear_deals()
+    for listing in listings:
+        save_deal(
+            {
+                "brand": listing.get("brand", "Unknown"),
+                "model": listing.get("model", "Unknown"),
+                "year": listing.get("year"),
+                "hours": listing.get("hours"),
+                "purchase_price": listing.get("price"),
+                "transport_cost": listing.get("estimated_transport_cost"),
+                "repair_cost": listing.get("estimated_repair_cost"),
+                "estimated_resale": listing.get("estimated_resale_value"),
+                "location": listing.get("location"),
+                "notes": listing.get("notes"),
+                "roi": listing.get("roi_percent"),
+                "recommendation": listing.get("recommendation"),
+            }
+        )
 
 
 def parse_manual_import(source: str) -> List[Dict[str, Any]]:
@@ -170,9 +180,25 @@ def import_listings(payload: ImportPayload) -> Dict[str, Any]:
             detail="No equipment opportunities were parsed from the supplied text."
         )
 
+    for listing in imported:
+        save_deal(
+            {
+                "brand": listing.get("brand", "Unknown"),
+                "model": listing.get("model", "Unknown"),
+                "year": listing.get("year"),
+                "hours": listing.get("hours"),
+                "purchase_price": listing.get("price"),
+                "transport_cost": listing.get("estimated_transport_cost"),
+                "repair_cost": listing.get("estimated_repair_cost"),
+                "estimated_resale": listing.get("estimated_resale_value"),
+                "location": listing.get("location"),
+                "notes": listing.get("notes"),
+                "roi": listing.get("roi_percent"),
+                "recommendation": listing.get("recommendation"),
+            }
+        )
+
     current = load_listings()
-    current.extend(imported)
-    save_listings(current)
     return {
         "imported": len(imported),
         "total": len(current),
@@ -180,7 +206,7 @@ def import_listings(payload: ImportPayload) -> Dict[str, Any]:
     }
 @app.delete("/api/listings")
 def clear_listings() -> Dict[str, int]:
-    save_listings([])
+    clear_deals()
     return {"deleted": 0}
 
 

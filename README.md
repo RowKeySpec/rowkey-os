@@ -19,6 +19,7 @@ python -m venv .venv
 source .venv/bin/activate  # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install --only-binary=:all: -r requirements.txt
+python init_db.py
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -81,5 +82,6 @@ Recommendation rules:
 
 ## Notes
 
-- Data is stored locally in backend/app/data/listings.json.
+- Deal data is now stored locally in SQLite at backend/app/data/deals.db.
+- The database is created automatically on startup via the initialization step.
 - This Phase 1 implementation intentionally keeps the experience simple and manual.
