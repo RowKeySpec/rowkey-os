@@ -54,25 +54,29 @@ The backend will be available at http://localhost:8000 and the frontend can be o
 
 ## Scoring model
 
-Each imported equipment record calculates a lightweight deal score using simple rules:
+The backend now uses a dedicated Deal Intelligence Engine to evaluate each imported equipment deal.
 
-- total_cost = price + estimated_transport_cost + estimated_repair_cost
-- expected_profit = estimated_resale_value - total_cost
-- roi_percent = expected_profit / total_cost * 100
-- overall_score = weighted blend of profit potential, risk, repair difficulty, and transport ease
-- profit_potential rises with higher ROI
-- risk drops for newer year and lower hours, and rises for older or heavily used equipment
-- repair_difficulty improves when repair cost is lower
-- ease_of_transport improves when transport cost is lower
-- expected_days_to_sell drops for high-ROI deals and preferred brands
+It calculates:
 
-Preferred brands:
+- total_investment = purchase price + transport cost + repair cost
+- estimated_gross_profit = estimated resale value - purchase price
+- net_profit = estimated resale value - total investment
+- roi_percent = net profit / total investment * 100
+- interest_cost = financing cost based on purchase price, APR, and expected days to sell
+- annualized_roi = adjusted return over a yearly basis
+- expected_days_to_sell = driven by ROI, brand preference, risk, and repair burden
+- recommended_max_offer = suggested ceiling for the purchase price based on margin targets
+- overall_score, profit_potential, risk, repair_difficulty, and ease_of_transport
 
-- Kubota
-- Takeuchi
-- Bobcat
-- Caterpillar
-- John Deere
+Business rules:
+
+- Target minimum equipment margin: 20%
+- Higher ROI improves profit potential
+- Expensive repairs increase repair difficulty and lower the score
+- Expensive transport lowers transport ease and the score
+- Preferred brands receive a small boost: Kubota, Takeuchi, Bobcat, Caterpillar, John Deere
+- Lower hours and newer equipment reduce risk
+- Long expected sale times reduce the deal quality
 
 Recommendation rules:
 
