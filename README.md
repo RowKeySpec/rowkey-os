@@ -84,4 +84,5 @@ Recommendation rules:
 
 - Deal data is now stored locally in SQLite at backend/app/data/deals.db.
 - The database is created automatically on startup via the initialization step.
+- You can export all stored deals as CSV from the dashboard or via GET /api/listings/export.csv.
 - This Phase 1 implementation intentionally keeps the experience simple and manual.

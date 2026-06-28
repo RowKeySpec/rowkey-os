@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import csv
+import io
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -165,6 +167,50 @@ def health() -> Dict[str, str]:
 @app.get("/api/listings")
 def get_listings() -> List[Dict[str, Any]]:
     return load_listings()
+
+
+@app.get("/api/listings/export.csv")
+def export_listings_csv() -> Any:
+    deals = load_listings()
+    fieldnames = [
+        "brand",
+        "model",
+        "year",
+        "hours",
+        "purchase_price",
+        "transport_cost",
+        "repair_cost",
+        "estimated_resale",
+        "roi",
+        "recommendation",
+        "location",
+        "notes",
+        "created_at",
+    ]
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for deal in deals:
+        writer.writerow(
+            {
+                "brand": deal.get("brand", ""),
+                "model": deal.get("model", ""),
+                "year": deal.get("year", ""),
+                "hours": deal.get("hours", ""),
+                "purchase_price": deal.get("price", ""),
+                "transport_cost": deal.get("estimated_transport_cost", ""),
+                "repair_cost": deal.get("estimated_repair_cost", ""),
+                "estimated_resale": deal.get("estimated_resale_value", ""),
+                "roi": deal.get("roi_percent", ""),
+                "recommendation": deal.get("recommendation", ""),
+                "location": deal.get("location", ""),
+                "notes": deal.get("notes", ""),
+                "created_at": deal.get("created_at", ""),
+            }
+        )
+    response = Response(content=output.getvalue(), media_type="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=equipment_deals.csv"
+    return response
 
 
 @app.post("/api/listings/import")

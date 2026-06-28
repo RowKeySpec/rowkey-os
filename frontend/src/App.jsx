@@ -91,6 +91,25 @@ function App() {
     setStatus('Cleared.');
   }
 
+  async function handleExportCsv() {
+    try {
+      const response = await fetch(`${API_BASE}/listings/export.csv`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'equipment_deals.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setStatus('Exported CSV.');
+    } catch (error) {
+      setStatus('CSV export failed.');
+      console.error(error);
+    }
+  }
+
   const averageScore = listings.length
     ? (listings.reduce((sum, item) => sum + (item.roi_percent || 0), 0) / listings.length).toFixed(1)
     : '0.0';
@@ -151,6 +170,7 @@ function App() {
           <div className="actions">
             <button type="submit">Analyze Deal</button>
             <button type="button" className="secondary" onClick={handleClear}>Clear</button>
+            <button type="button" onClick={handleExportCsv}>Export CSV</button>
           </div>
         </form>
         <p className="status">{status}</p>
