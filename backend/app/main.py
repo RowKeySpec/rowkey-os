@@ -27,8 +27,10 @@ if not DATA_PATH.exists():
     DATA_PATH.write_text("[]", encoding="utf-8")
 
 
+from typing import List
+
 class ImportPayload(BaseModel):
-    source: str
+    rows: List[str]
 
 
 class Listing(BaseModel):
@@ -68,8 +70,10 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
         if not line:
             continue
         parts = [part.strip() for part in line.split("|")]
-        if len(parts) < 10:
-            continue
+        if len(parts) != 10:
+            raise ValueError(
+                f"Expected 10 pipe-delimited fields for equipment rows, received {len(parts)}: {line}"
+            )
 
         brand = parts[0] or "Unknown"
         model = parts[1] or "Unknown"
@@ -88,19 +92,28 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
             except ValueError:
                 return None
 
+        year = parse_int(parts[2])
+        hours = parse_int(parts[3])
+        price = parse_float(parts[4])
+        location = parts[5]
+        transport = parse_float(parts[6])
+        repair = parse_float(parts[7])
+        resale = parse_float(parts[8])
+        notes = parts[9]
+
         score, reasons, recommendation, metrics = score_listing(
             {
                 "title": title,
                 "brand": brand,
                 "model": model,
-                "year": parse_int(parts[2]) if len(parts) > 2 else None,
-                "hours": parse_int(parts[3]) if len(parts) > 3 else None,
-                "price": parse_float(parts[4]) if len(parts) > 4 else None,
-                "location": parts[5] if len(parts) > 5 else None,
-                "estimated_transport_cost": parse_float(parts[6]) if len(parts) > 6 else None,
-                "estimated_repair_cost": parse_float(parts[7]) if len(parts) > 7 else None,
-                "estimated_resale_value": parse_float(parts[8]) if len(parts) > 8 else None,
-                "notes": parts[9] if len(parts) > 9 else None,
+                "year": year,
+                "hours": hours,
+                "price": price,
+                "location": location,
+                "estimated_transport_cost": transport,
+                "estimated_repair_cost": repair,
+                "estimated_resale_value": resale,
+                "notes": notes,
             }
         )
 
@@ -109,14 +122,14 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
                 "title": title,
                 "brand": brand,
                 "model": model,
-                "year": parse_int(parts[2]) if len(parts) > 2 else None,
-                "hours": parse_int(parts[3]) if len(parts) > 3 else None,
-                "price": parse_float(parts[4]) if len(parts) > 4 else None,
-                "location": parts[5] if len(parts) > 5 else None,
-                "estimated_transport_cost": parse_float(parts[6]) if len(parts) > 6 else None,
-                "estimated_repair_cost": parse_float(parts[7]) if len(parts) > 7 else None,
-                "estimated_resale_value": parse_float(parts[8]) if len(parts) > 8 else None,
-                "notes": parts[9] if len(parts) > 9 else None,
+                "year": year,
+                "hours": hours,
+                "price": price,
+                "location": location,
+                "estimated_transport_cost": transport,
+                "estimated_repair_cost": repair,
+                "estimated_resale_value": resale,
+                "notes": notes,
                 "score": round(score, 1),
                 "recommendation": recommendation,
                 "total_cost": metrics["total_cost"],
@@ -140,16 +153,25 @@ def get_listings() -> List[Dict[str, Any]]:
 
 @app.post("/api/listings/import")
 def import_listings(payload: ImportPayload) -> Dict[str, Any]:
-    imported = parse_manual_import(payload.source)
+    try:
+        imported = parse_manual_import("\n".join(payload.rows))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     if not imported:
-        raise HTTPException(status_code=400, detail="No equipment opportunities were parsed from the supplied text.")
+        raise HTTPException(
+            status_code=400,
+            detail="No equipment opportunities were parsed from the supplied text."
+        )
 
     current = load_listings()
     current.extend(imported)
     save_listings(current)
-    return {"imported": len(imported), "total": len(current), "listings": current}
-
-
+    return {
+        "imported": len(imported),
+        "total": len(current),
+        "listings": current,
+    }
 @app.delete("/api/listings")
 def clear_listings() -> Dict[str, int]:
     save_listings([])

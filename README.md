@@ -31,13 +31,25 @@ CAT|320D|2018|6200|125000|Denver|3500|4500|145000|Serviced and ready to work
 Komatsu|PC200|2016|9800|110000|Phoenix|2800|6000|128000|Hydraulic leak repaired
 ```
 
+### Frontend startup
+
+From the frontend folder, run:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Then open http://localhost:5173 in your browser.
+
 ### Option 2: Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-The backend will be available at http://localhost:8000 and the frontend can be opened from the static file at frontend/index.html.
+The backend will be available at http://localhost:8000 and the frontend can be opened at http://localhost:5173 when started with Vite.
 
 ## Scoring model
 

@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "title": "Kubota SVL75",
+    "brand": "Kubota",
+    "model": "SVL75",
+    "year": 2022,
+    "hours": 1200,
+    "price": 32000.0,
+    "location": "Gardendale, TX",
+    "estimated_transport_cost": 850.0,
+    "estimated_repair_cost": 1500.0,
+    "estimated_resale_value": 43000.0,
+    "notes": "Clean machine",
+    "score": 25.2,
+    "recommendation": "BUY_NOW",
+    "total_cost": 34350.0,
+    "expected_profit": 8650.0,
+    "roi_percent": 25.2,
+    "reasons": [
+      "Strong resale upside",
+      "Newer model year",
+      "Low usage hours",
+      "Manageable transport cost",
+      "Repair budget is modest"
+    ]
+  }
+]
