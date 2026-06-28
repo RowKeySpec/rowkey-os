@@ -1,11 +1,11 @@
 # RowKey OS / Project Titan
 
-Phase 1 MVP for a lightweight property-listing intelligence workspace.
+Phase 1 MVP for a lightweight heavy equipment opportunity workspace.
 
 ## What is included
 
-- FastAPI backend with a manual import endpoint and a simple scoring engine
-- React-style single-page dashboard served as a static HTML file
+- FastAPI backend with a manual import endpoint and a simple equipment ROI scoring engine
+- React-style single-page dashboard for reviewing equipment opportunities
 - Docker Compose setup for local development
 - README and workspace-local data storage
 
@@ -27,8 +27,8 @@ This uses the lightweight FastAPI + Uvicorn + Pydantic stack without the `uvicor
 Then open http://localhost:8000/docs for API docs, and open the frontend file directly in a browser or serve it with a simple static server. For a quick test, use a file such as:
 
 ```text
-Modern Loft | $2400 | 2 | 2 | 1100 | Downtown | Pet friendly and renovated
-Cozy Studio | $1800 | 1 | 1 | 650 | Midtown | Parking available
+CAT|320D|2018|6200|125000|Denver|3500|4500|145000|Serviced and ready to work
+Komatsu|PC200|2016|9800|110000|Phoenix|2800|6000|128000|Hydraulic leak repaired
 ```
 
 ### Option 2: Docker Compose
@@ -38,6 +38,20 @@ docker compose up --build
 ```
 
 The backend will be available at http://localhost:8000 and the frontend can be opened from the static file at frontend/index.html.
+
+## Scoring model
+
+Each imported equipment record calculates:
+
+- total_cost = price + estimated_transport_cost + estimated_repair_cost
+- expected_profit = estimated_resale_value - total_cost
+- roi_percent = expected_profit / total_cost * 100
+
+Recommendation rules:
+
+- BUY_NOW if ROI >= 25%
+- NEGOTIATE if ROI >= 15% and ROI < 25%
+- PASS if ROI < 15%
 
 ## Notes
 

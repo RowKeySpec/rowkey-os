@@ -33,13 +33,21 @@ class ImportPayload(BaseModel):
 
 class Listing(BaseModel):
     title: str
+    brand: str | None = None
+    model: str | None = None
+    year: int | None = None
+    hours: int | None = None
     price: float | None = None
-    bedrooms: int | None = None
-    bathrooms: int | None = None
-    square_feet: int | None = None
-    neighborhood: str | None = None
+    location: str | None = None
+    estimated_transport_cost: float | None = None
+    estimated_repair_cost: float | None = None
+    estimated_resale_value: float | None = None
     notes: str | None = None
     score: float | None = None
+    recommendation: str | None = None
+    total_cost: float | None = None
+    expected_profit: float | None = None
+    roi_percent: float | None = None
     reasons: List[str] | None = None
 
 
@@ -60,62 +68,60 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
         if not line:
             continue
         parts = [part.strip() for part in line.split("|")]
-        if len(parts) < 2:
+        if len(parts) < 10:
             continue
-        title = parts[0] or "Untitled"
-        price_value = parts[1].replace("$", "").replace(",", "")
-        try:
-            price = float(price_value)
-        except ValueError:
-            price = None
 
-        bedrooms = None
-        bathrooms = None
-        square_feet = None
-        neighborhood = None
-        notes = None
+        brand = parts[0] or "Unknown"
+        model = parts[1] or "Unknown"
+        title = f"{brand} {model}".strip()
 
-        if len(parts) > 2 and parts[2]:
+        def parse_float(text: str) -> float | None:
+            value = text.replace("$", "").replace(",", "")
             try:
-                bedrooms = int(parts[2])
+                return float(value)
             except ValueError:
-                pass
-        if len(parts) > 3 and parts[3]:
-            try:
-                bathrooms = int(parts[3])
-            except ValueError:
-                pass
-        if len(parts) > 4 and parts[4]:
-            try:
-                square_feet = int(parts[4])
-            except ValueError:
-                pass
-        if len(parts) > 5 and parts[5]:
-            neighborhood = parts[5]
-        if len(parts) > 6 and parts[6]:
-            notes = parts[6]
+                return None
 
-        score, reasons = score_listing(
+        def parse_int(text: str) -> int | None:
+            try:
+                return int(text)
+            except ValueError:
+                return None
+
+        score, reasons, recommendation, metrics = score_listing(
             {
                 "title": title,
-                "price": price,
-                "bedrooms": bedrooms,
-                "bathrooms": bathrooms,
-                "square_feet": square_feet,
-                "neighborhood": neighborhood,
-                "notes": notes,
+                "brand": brand,
+                "model": model,
+                "year": parse_int(parts[2]) if len(parts) > 2 else None,
+                "hours": parse_int(parts[3]) if len(parts) > 3 else None,
+                "price": parse_float(parts[4]) if len(parts) > 4 else None,
+                "location": parts[5] if len(parts) > 5 else None,
+                "estimated_transport_cost": parse_float(parts[6]) if len(parts) > 6 else None,
+                "estimated_repair_cost": parse_float(parts[7]) if len(parts) > 7 else None,
+                "estimated_resale_value": parse_float(parts[8]) if len(parts) > 8 else None,
+                "notes": parts[9] if len(parts) > 9 else None,
             }
         )
+
         parsed.append(
             {
                 "title": title,
-                "price": price,
-                "bedrooms": bedrooms,
-                "bathrooms": bathrooms,
-                "square_feet": square_feet,
-                "neighborhood": neighborhood,
-                "notes": notes,
+                "brand": brand,
+                "model": model,
+                "year": parse_int(parts[2]) if len(parts) > 2 else None,
+                "hours": parse_int(parts[3]) if len(parts) > 3 else None,
+                "price": parse_float(parts[4]) if len(parts) > 4 else None,
+                "location": parts[5] if len(parts) > 5 else None,
+                "estimated_transport_cost": parse_float(parts[6]) if len(parts) > 6 else None,
+                "estimated_repair_cost": parse_float(parts[7]) if len(parts) > 7 else None,
+                "estimated_resale_value": parse_float(parts[8]) if len(parts) > 8 else None,
+                "notes": parts[9] if len(parts) > 9 else None,
                 "score": round(score, 1),
+                "recommendation": recommendation,
+                "total_cost": metrics["total_cost"],
+                "expected_profit": metrics["expected_profit"],
+                "roi_percent": metrics["roi_percent"],
                 "reasons": reasons,
             }
         )
@@ -136,7 +142,7 @@ def get_listings() -> List[Dict[str, Any]]:
 def import_listings(payload: ImportPayload) -> Dict[str, Any]:
     imported = parse_manual_import(payload.source)
     if not imported:
-        raise HTTPException(status_code=400, detail="No listings were parsed from the supplied text.")
+        raise HTTPException(status_code=400, detail="No equipment opportunities were parsed from the supplied text.")
 
     current = load_listings()
     current.extend(imported)
@@ -152,4 +158,4 @@ def clear_listings() -> Dict[str, int]:
 
 @app.get("/")
 def index() -> Dict[str, str]:
-    return {"message": "RowKey OS / Project Titan backend is running. Open the frontend at /frontend or use the API endpoints."}
+    return {"message": "RowKey OS / Project Titan backend is running. Open the frontend to review equipment opportunities."}

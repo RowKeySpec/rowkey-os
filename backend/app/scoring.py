@@ -3,59 +3,56 @@ from __future__ import annotations
 from typing import Any, Dict, List, Tuple
 
 
-def score_listing(listing: Dict[str, Any]) -> Tuple[float, List[str]]:
-    score = 50.0
-    reasons: List[str] = []
-
-    title = (listing.get("title") or "").lower()
-    notes = (listing.get("notes") or "").lower()
-    neighborhood = (listing.get("neighborhood") or "").lower()
-
-    if any(keyword in title for keyword in ["luxury", "renovated", "updated", "modern", "waterfront"]):
-        score += 15
-        reasons.append("Premium positioning")
-    if any(keyword in notes for keyword in ["pet", "parking", "washer", "dryer", "gym", "pool"]):
-        score += 8
-        reasons.append("Convenience features")
-    if any(keyword in neighborhood for keyword in ["downtown", "river", "midtown", "harbor", "west"]):
-        score += 10
-        reasons.append("High-demand neighborhood")
-
+def score_listing(listing: Dict[str, Any]) -> Tuple[float, List[str], str, Dict[str, float | None]]:
     price = listing.get("price")
+    transport = listing.get("estimated_transport_cost")
+    repair = listing.get("estimated_repair_cost")
+    resale = listing.get("estimated_resale_value")
+
+    total_cost = 0.0
     if price is not None:
-        if price <= 2200:
-            score += 8
-            reasons.append("Competitive pricing")
-        elif price >= 3600:
-            score -= 8
-            reasons.append("High price for the market")
+        total_cost += float(price)
+    if transport is not None:
+        total_cost += float(transport)
+    if repair is not None:
+        total_cost += float(repair)
 
-    bedrooms = listing.get("bedrooms")
-    if bedrooms is not None:
-        if bedrooms >= 2:
-            score += 6
-            reasons.append("Two or more bedrooms")
-        elif bedrooms == 1:
-            score -= 3
-            reasons.append("Studio-like footprint")
+    expected_profit = 0.0
+    if resale is not None:
+        expected_profit = float(resale) - total_cost
 
-    bathrooms = listing.get("bathrooms")
-    if bathrooms is not None:
-        if bathrooms >= 2:
-            score += 7
-            reasons.append("Two or more baths")
+    roi_percent = 0.0
+    if total_cost > 0:
+        roi_percent = (expected_profit / total_cost) * 100.0
 
-    square_feet = listing.get("square_feet")
-    if square_feet is not None:
-        if square_feet >= 1000:
-            score += 6
-            reasons.append("Spacious layout")
-        elif square_feet < 700:
-            score -= 4
-            reasons.append("Smaller footprint")
+    reasons: List[str] = []
+    if roi_percent >= 25:
+        recommendation = "BUY_NOW"
+        reasons.append("Strong resale upside")
+    elif roi_percent >= 15:
+        recommendation = "NEGOTIATE"
+        reasons.append("Solid margin for negotiation")
+    else:
+        recommendation = "PASS"
+        reasons.append("Weak ROI profile")
 
-    if not title:
-        score -= 5
-        reasons.append("Title missing")
+    year = listing.get("year")
+    hours = listing.get("hours")
+    if year is not None and year >= 2018:
+        reasons.append("Newer model year")
+    if hours is not None and hours < 5000:
+        reasons.append("Low usage hours")
+    elif hours is not None and hours > 12000:
+        reasons.append("High usage hours")
 
-    return round(max(0.0, min(100.0, score)), 1), reasons
+    if transport is not None and transport <= 3000:
+        reasons.append("Manageable transport cost")
+    if repair is not None and repair <= 5000:
+        reasons.append("Repair budget is modest")
+
+    metrics = {
+        "total_cost": round(total_cost, 2),
+        "expected_profit": round(expected_profit, 2),
+        "roi_percent": round(roi_percent, 1),
+    }
+    return round(roi_percent, 1), reasons, recommendation, metrics
