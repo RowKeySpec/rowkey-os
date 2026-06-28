@@ -16,10 +16,13 @@ Phase 1 MVP for a lightweight property-listing intelligence workspace.
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+source .venv/bin/activate  # Windows PowerShell: .\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install --only-binary=:all: -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+This uses the lightweight FastAPI + Uvicorn + Pydantic stack without the `uvicorn[standard]` extra, so it avoids `httptools`, `watchfiles`, `orjson`, and `ujson` and stays compatible with Windows without Visual C++ Build Tools.
 
 Then open http://localhost:8000/docs for API docs, and open the frontend file directly in a browser or serve it with a simple static server. For a quick test, use a file such as:
 
