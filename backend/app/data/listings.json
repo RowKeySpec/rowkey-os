@@ -23,5 +23,28 @@
       "Manageable transport cost",
       "Repair budget is modest"
     ]
+  },
+  {
+    "title": "CAT 320D",
+    "brand": "CAT",
+    "model": "320D",
+    "year": 2018,
+    "hours": 6200,
+    "price": 125000.0,
+    "location": "Denver",
+    "estimated_transport_cost": 3500.0,
+    "estimated_repair_cost": 4500.0,
+    "estimated_resale_value": 145000.0,
+    "notes": "Serviced",
+    "score": 9.0,
+    "recommendation": "PASS",
+    "total_cost": 133000.0,
+    "expected_profit": 12000.0,
+    "roi_percent": 9.0,
+    "reasons": [
+      "Weak ROI profile",
+      "Newer model year",
+      "Repair budget is modest"
+    ]
   }
 ]

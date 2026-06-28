@@ -2,43 +2,92 @@ import { useEffect, useState } from 'react';
 
 const API_BASE = 'http://localhost:8000/api';
 
+const emptyForm = {
+  brand: '',
+  model: '',
+  year: '',
+  hours: '',
+  purchasePrice: '',
+  location: '',
+  transportCost: '',
+  repairCost: '',
+  estimatedResaleValue: '',
+  notes: ''
+};
+
 function App() {
-  const [source, setSource] = useState('CAT|320D|2018|6200|125000|Denver|3500|4500|145000|Serviced and ready to work');
+  const [formData, setFormData] = useState(emptyForm);
   const [listings, setListings] = useState([]);
-  const [status, setStatus] = useState('Loading equipment opportunities...');
+  const [status, setStatus] = useState('Analyze a deal to see its projected ROI.');
+  const [analysis, setAnalysis] = useState(null);
 
   async function loadListings() {
-    const response = await fetch(`${API_BASE}/listings`);
-    const data = await response.json();
-    setListings(data);
-    setStatus(data.length ? `Loaded ${data.length} equipment opportunities.` : 'No equipment opportunities yet.');
+    try {
+      const response = await fetch(`${API_BASE}/listings`);
+      const data = await response.json();
+      setListings(data);
+      setStatus(data.length ? `Loaded ${data.length} equipment opportunities.` : 'No equipment opportunities yet.');
+    } catch (error) {
+      setStatus('Unable to reach the backend service.');
+      console.error(error);
+    }
   }
 
   useEffect(() => {
     loadListings();
   }, []);
 
-  async function handleImport(event) {
+  function handleFieldChange(event) {
+    const { name, value } = event.target;
+    setFormData((previous) => ({ ...previous, [name]: value }));
+  }
+
+  async function handleAnalyzeDeal(event) {
     event.preventDefault();
-    setStatus('Importing...');
-    const response = await fetch(`${API_BASE}/listings/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source })
-    });
-    const result = await response.json();
-    if (response.ok) {
-      setStatus(`Imported ${result.imported} equipment opportunity(ies).`);
-      setSource('');
-      await loadListings();
-    } else {
-      setStatus(result.detail || 'Import failed.');
+    setStatus('Analyzing deal...');
+
+    const row = [
+      formData.brand,
+      formData.model,
+      formData.year,
+      formData.hours,
+      formData.purchasePrice,
+      formData.location,
+      formData.transportCost,
+      formData.repairCost,
+      formData.estimatedResaleValue,
+      formData.notes
+    ].join('|');
+
+    try {
+      const response = await fetch(`${API_BASE}/listings/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: [row] })
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        const latestListing = result.listings?.at(-1) || null;
+        setAnalysis(latestListing);
+        setFormData(emptyForm);
+        setStatus(`Analyzed ${result.imported} equipment opportunity(ies).`);
+        await loadListings();
+      } else {
+        setAnalysis(null);
+        setStatus(result.detail || 'Analysis failed.');
+      }
+    } catch (error) {
+      setAnalysis(null);
+      setStatus('Analysis failed.');
+      console.error(error);
     }
   }
 
   async function handleClear() {
     await fetch(`${API_BASE}/listings`, { method: 'DELETE' });
     await loadListings();
+    setAnalysis(null);
     setStatus('Cleared.');
   }
 
@@ -54,19 +103,81 @@ function App() {
       </section>
 
       <section className="card">
-        <h2>Import equipment opportunities</h2>
-        <form onSubmit={handleImport}>
-          <textarea
-            value={source}
-            onChange={(event) => setSource(event.target.value)}
-            placeholder="Brand | Model | Year | Hours | Price | Location | Transport | Repair | Resale | Notes"
-          />
+        <h2>Equipment deal form</h2>
+        <form onSubmit={handleAnalyzeDeal} className="deal-form">
+          <div className="form-grid">
+            <label>
+              Brand
+              <input name="brand" value={formData.brand} onChange={handleFieldChange} placeholder="CAT" />
+            </label>
+            <label>
+              Model
+              <input name="model" value={formData.model} onChange={handleFieldChange} placeholder="320D" />
+            </label>
+            <label>
+              Year
+              <input name="year" type="number" value={formData.year} onChange={handleFieldChange} placeholder="2018" />
+            </label>
+            <label>
+              Hours
+              <input name="hours" type="number" value={formData.hours} onChange={handleFieldChange} placeholder="6200" />
+            </label>
+            <label>
+              Purchase Price
+              <input name="purchasePrice" type="number" value={formData.purchasePrice} onChange={handleFieldChange} placeholder="125000" />
+            </label>
+            <label>
+              Location
+              <input name="location" value={formData.location} onChange={handleFieldChange} placeholder="Denver" />
+            </label>
+            <label>
+              Transport Cost
+              <input name="transportCost" type="number" value={formData.transportCost} onChange={handleFieldChange} placeholder="3500" />
+            </label>
+            <label>
+              Repair Cost
+              <input name="repairCost" type="number" value={formData.repairCost} onChange={handleFieldChange} placeholder="4500" />
+            </label>
+            <label>
+              Estimated Resale Value
+              <input name="estimatedResaleValue" type="number" value={formData.estimatedResaleValue} onChange={handleFieldChange} placeholder="145000" />
+            </label>
+            <label className="full-width">
+              Notes
+              <textarea name="notes" value={formData.notes} onChange={handleFieldChange} placeholder="Serviced and ready to work" />
+            </label>
+          </div>
+
           <div className="actions">
-            <button type="submit">Import</button>
+            <button type="submit">Analyze Deal</button>
             <button type="button" className="secondary" onClick={handleClear}>Clear</button>
           </div>
         </form>
         <p className="status">{status}</p>
+
+        {analysis ? (
+          <div className="analysis-summary">
+            <h3>Latest deal summary</h3>
+            <div className="stats-grid">
+              <div className="stat-card">
+                <span>Total cost</span>
+                <strong>${analysis.total_cost?.toLocaleString() ?? 'n/a'}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Expected profit</span>
+                <strong>${analysis.expected_profit?.toLocaleString() ?? 'n/a'}</strong>
+              </div>
+              <div className="stat-card">
+                <span>ROI</span>
+                <strong>{analysis.roi_percent ?? 'n/a'}%</strong>
+              </div>
+              <div className="stat-card">
+                <span>Recommendation</span>
+                <strong>{analysis.recommendation || 'n/a'}</strong>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="card">
