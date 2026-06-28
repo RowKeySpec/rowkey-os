@@ -53,11 +53,25 @@ The backend will be available at http://localhost:8000 and the frontend can be o
 
 ## Scoring model
 
-Each imported equipment record calculates:
+Each imported equipment record calculates a lightweight deal score using simple rules:
 
 - total_cost = price + estimated_transport_cost + estimated_repair_cost
 - expected_profit = estimated_resale_value - total_cost
 - roi_percent = expected_profit / total_cost * 100
+- overall_score = weighted blend of profit potential, risk, repair difficulty, and transport ease
+- profit_potential rises with higher ROI
+- risk drops for newer year and lower hours, and rises for older or heavily used equipment
+- repair_difficulty improves when repair cost is lower
+- ease_of_transport improves when transport cost is lower
+- expected_days_to_sell drops for high-ROI deals and preferred brands
+
+Preferred brands:
+
+- Kubota
+- Takeuchi
+- Bobcat
+- Caterpillar
+- John Deere
 
 Recommendation rules:
 

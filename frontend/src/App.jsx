@@ -205,6 +205,12 @@ function App() {
                 </div>
                 <p>{listing.brand} {listing.model} • {listing.year} • {listing.hours} hrs</p>
                 <p>Price: ${listing.price?.toLocaleString() ?? 'n/a'}</p>
+                <p>Overall Score: {listing.overall_score ?? 'n/a'}/10</p>
+                <p>Profit Potential: {listing.profit_potential ?? 'n/a'}/10</p>
+                <p>Risk: {listing.risk ?? 'n/a'}/10</p>
+                <p>Repair Difficulty: {listing.repair_difficulty ?? 'n/a'}/10</p>
+                <p>Ease of Transport: {listing.ease_of_transport ?? 'n/a'}/10</p>
+                <p>Expected Days to Sell: {listing.expected_days_to_sell ?? 'n/a'}</p>
                 <p>ROI: {listing.roi_percent ?? 'n/a'}%</p>
                 <p>Expected profit: ${listing.expected_profit?.toLocaleString() ?? 'n/a'}</p>
                 <p>Location: {listing.location ?? 'n/a'}</p>

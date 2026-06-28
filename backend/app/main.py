@@ -135,6 +135,12 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
                 "total_cost": metrics["total_cost"],
                 "expected_profit": metrics["expected_profit"],
                 "roi_percent": metrics["roi_percent"],
+                "overall_score": metrics["overall_score"],
+                "profit_potential": metrics["profit_potential"],
+                "risk": metrics["risk"],
+                "repair_difficulty": metrics["repair_difficulty"],
+                "ease_of_transport": metrics["ease_of_transport"],
+                "expected_days_to_sell": metrics["expected_days_to_sell"],
                 "reasons": reasons,
             }
         )
