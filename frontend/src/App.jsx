@@ -15,6 +15,71 @@ const emptyForm = {
   notes: ''
 };
 
+function toNumber(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+function normalizeListing(listing = {}) {
+  const purchasePrice = toNumber(listing.price ?? listing.purchase_price ?? 0);
+  const transportCost = toNumber(listing.estimated_transport_cost ?? listing.transport_cost ?? 0);
+  const repairCost = toNumber(listing.estimated_repair_cost ?? listing.repair_cost ?? 0);
+  const estimatedResale = toNumber(listing.estimated_resale_value ?? listing.estimated_resale ?? 0);
+  const totalInvestment = toNumber(listing.total_investment ?? purchasePrice + transportCost + repairCost);
+  const estimatedGrossProfit = toNumber(listing.estimated_gross_profit ?? estimatedResale - purchasePrice);
+  const netProfit = toNumber(listing.net_profit ?? estimatedResale - totalInvestment);
+  const roiPercent = toNumber(
+    listing.roi_percent ?? listing.roi ?? (totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0)
+  );
+  const interestCost = toNumber(listing.interest_cost ?? 0);
+  const annualizedRoi = toNumber(listing.annualized_roi ?? roiPercent);
+  const expectedDaysToSell = Number.isFinite(Number(listing.expected_days_to_sell))
+    ? Number(listing.expected_days_to_sell)
+    : (roiPercent >= 25 ? 20 : roiPercent >= 15 ? 30 : 45);
+  const recommendedMaxOffer = toNumber(listing.recommended_max_offer ?? Math.max(0, estimatedResale - repairCost - transportCost));
+  const overallScore = listing.overall_score ?? listing.overallScore ?? null;
+  const profitPotential = listing.profit_potential ?? listing.profitPotential ?? null;
+  const risk = listing.risk ?? null;
+  const repairDifficulty = listing.repair_difficulty ?? null;
+  const easeOfTransport = listing.ease_of_transport ?? null;
+  const recommendation = listing.recommendation ?? (roiPercent >= 25 ? 'BUY_NOW' : roiPercent >= 15 ? 'NEGOTIATE' : 'PASS');
+  const reasons = Array.isArray(listing.reasons) && listing.reasons.length
+    ? listing.reasons
+    : [
+        roiPercent >= 25 ? 'Strong resale upside' : roiPercent >= 15 ? 'Solid margin for negotiation' : 'Weak ROI profile',
+        listing.hours && Number(listing.hours) < 5000 ? 'Low usage hours' : 'Moderate usage',
+        transportCost <= 3000 ? 'Manageable transport cost' : 'Higher transport cost'
+      ];
+
+  return {
+    ...listing,
+    title: listing.title || `${listing.brand || ''} ${listing.model || ''}`.trim(),
+    price: purchasePrice,
+    purchase_price: purchasePrice,
+    estimated_transport_cost: transportCost,
+    transport_cost: transportCost,
+    estimated_repair_cost: repairCost,
+    repair_cost: repairCost,
+    estimated_resale_value: estimatedResale,
+    estimated_resale: estimatedResale,
+    total_investment: totalInvestment,
+    estimated_gross_profit: estimatedGrossProfit,
+    net_profit: netProfit,
+    roi_percent: roiPercent,
+    interest_cost: interestCost,
+    annualized_roi: annualizedRoi,
+    expected_days_to_sell: expectedDaysToSell,
+    recommended_max_offer: recommendedMaxOffer,
+    overall_score: overallScore,
+    profit_potential: profitPotential,
+    risk,
+    repair_difficulty: repairDifficulty,
+    ease_of_transport: easeOfTransport,
+    recommendation,
+    reasons,
+  };
+}
+
 function App() {
   const [formData, setFormData] = useState(emptyForm);
   const [listings, setListings] = useState([]);
@@ -25,8 +90,9 @@ function App() {
     try {
       const response = await fetch(`${API_BASE}/listings`);
       const data = await response.json();
-      setListings(data);
-      setStatus(data.length ? `Loaded ${data.length} equipment opportunities.` : 'No equipment opportunities yet.');
+      const normalizedListings = Array.isArray(data) ? data.map(normalizeListing) : [];
+      setListings(normalizedListings);
+      setStatus(normalizedListings.length ? `Loaded ${normalizedListings.length} equipment opportunities.` : 'No equipment opportunities yet.');
     } catch (error) {
       setStatus('Unable to reach the backend service.');
       console.error(error);
@@ -69,7 +135,7 @@ function App() {
 
       if (response.ok) {
         const latestListing = result.listings?.at(-1) || null;
-        setAnalysis(latestListing);
+        setAnalysis(latestListing ? normalizeListing(latestListing) : null);
         setFormData(emptyForm);
         setStatus(`Analyzed ${result.imported} equipment opportunity(ies).`);
         await loadListings();
@@ -110,8 +176,11 @@ function App() {
     }
   }
 
-  const averageScore = listings.length
-    ? (listings.reduce((sum, item) => sum + (item.roi_percent || 0), 0) / listings.length).toFixed(1)
+  const normalizedListings = listings.map(normalizeListing);
+  const normalizedAnalysis = analysis ? normalizeListing(analysis) : null;
+
+  const averageScore = normalizedListings.length
+    ? (normalizedListings.reduce((sum, item) => sum + (item.roi_percent || 0), 0) / normalizedListings.length).toFixed(1)
     : '0.0';
 
   return (
@@ -175,25 +244,25 @@ function App() {
         </form>
         <p className="status">{status}</p>
 
-        {analysis ? (
+        {normalizedAnalysis ? (
           <div className="analysis-summary">
             <h3>Latest deal summary</h3>
             <div className="stats-grid">
               <div className="stat-card">
-                <span>Total cost</span>
-                <strong>${analysis.total_cost?.toLocaleString() ?? 'n/a'}</strong>
+                <span>Total investment</span>
+                <strong>${normalizedAnalysis.total_investment?.toLocaleString() ?? 'n/a'}</strong>
               </div>
               <div className="stat-card">
-                <span>Expected profit</span>
-                <strong>${analysis.expected_profit?.toLocaleString() ?? 'n/a'}</strong>
+                <span>Net profit</span>
+                <strong>${normalizedAnalysis.net_profit?.toLocaleString() ?? 'n/a'}</strong>
               </div>
               <div className="stat-card">
                 <span>ROI</span>
-                <strong>{analysis.roi_percent ?? 'n/a'}%</strong>
+                <strong>{normalizedAnalysis.roi_percent ?? 'n/a'}%</strong>
               </div>
               <div className="stat-card">
                 <span>Recommendation</span>
-                <strong>{analysis.recommendation || 'n/a'}</strong>
+                <strong>{normalizedAnalysis.recommendation || 'n/a'}</strong>
               </div>
             </div>
           </div>
@@ -205,7 +274,7 @@ function App() {
         <div className="stats-grid">
           <div className="stat-card">
             <span>Equipment tracked</span>
-            <strong>{listings.length}</strong>
+            <strong>{normalizedListings.length}</strong>
           </div>
           <div className="stat-card">
             <span>Average ROI</span>
@@ -214,27 +283,107 @@ function App() {
         </div>
 
         <div className="listing-list">
-          {listings.length === 0 ? (
+          {normalizedListings.length === 0 ? (
             <p>No equipment opportunities yet.</p>
           ) : (
-            listings.map((listing, index) => (
+            normalizedListings.map((listing, index) => (
               <article key={`${listing.title}-${index}`} className="listing-card">
                 <div className="listing-header">
                   <h3>{listing.title}</h3>
                   <span className="score-pill">{listing.recommendation}</span>
                 </div>
                 <p>{listing.brand} {listing.model} • {listing.year} • {listing.hours} hrs</p>
-                <p>Price: ${listing.price?.toLocaleString() ?? 'n/a'}</p>
-                <p>Overall Score: {listing.overall_score ?? 'n/a'}/10</p>
-                <p>Profit Potential: {listing.profit_potential ?? 'n/a'}/10</p>
-                <p>Risk: {listing.risk ?? 'n/a'}/10</p>
-                <p>Repair Difficulty: {listing.repair_difficulty ?? 'n/a'}/10</p>
-                <p>Ease of Transport: {listing.ease_of_transport ?? 'n/a'}/10</p>
-                <p>Expected Days to Sell: {listing.expected_days_to_sell ?? 'n/a'}</p>
-                <p>ROI: {listing.roi_percent ?? 'n/a'}%</p>
-                <p>Expected profit: ${listing.expected_profit?.toLocaleString() ?? 'n/a'}</p>
                 <p>Location: {listing.location ?? 'n/a'}</p>
-                <p>Reasons: {listing.reasons?.join(', ') || 'n/a'}</p>
+
+                <div className="card-section">
+                  <h4>Main deal info</h4>
+                  <div className="metric-grid">
+                    <div className="metric">
+                      <span>Total investment</span>
+                      <strong>${listing.total_investment?.toLocaleString() ?? listing.total_cost?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Purchase price</span>
+                      <strong>${listing.price?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Expected days to sell</span>
+                      <strong>{listing.expected_days_to_sell ?? 'n/a'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card-section">
+                  <h4>Profit numbers</h4>
+                  <div className="metric-grid">
+                    <div className="metric">
+                      <span>Estimated gross profit</span>
+                      <strong>${listing.estimated_gross_profit?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Net profit</span>
+                      <strong>${listing.net_profit?.toLocaleString() ?? listing.expected_profit?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>ROI</span>
+                      <strong>{listing.roi_percent ?? 'n/a'}%</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Interest cost</span>
+                      <strong>${listing.interest_cost?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Annualized ROI</span>
+                      <strong>{listing.annualized_roi ?? 'n/a'}%</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Suggested max offer</span>
+                      <strong>${listing.recommended_max_offer?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card-section">
+                  <h4>Scores</h4>
+                  <div className="metric-grid">
+                    <div className="metric">
+                      <span>Overall score</span>
+                      <strong>{listing.overall_score ?? 'n/a'}/10</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Profit potential</span>
+                      <strong>{listing.profit_potential ?? 'n/a'}/10</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Risk</span>
+                      <strong>{listing.risk ?? 'n/a'}/10</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Repair difficulty</span>
+                      <strong>{listing.repair_difficulty ?? 'n/a'}/10</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Ease of transport</span>
+                      <strong>{listing.ease_of_transport ?? 'n/a'}/10</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card-section">
+                  <h4>Recommendation</h4>
+                  <div className="metric-grid">
+                    <div className="metric">
+                      <span>Recommendation</span>
+                      <strong>{listing.recommendation || 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Notes</span>
+                      <strong>{listing.notes || 'n/a'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="status">Reasons: {listing.reasons?.join(', ') || 'n/a'}</p>
               </article>
             ))
           )}

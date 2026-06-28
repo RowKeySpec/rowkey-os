@@ -121,14 +121,15 @@ button.secondary {
   background: #0d1627;
   border: 1px solid #233654;
   border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
 }
 
 .listing-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 10px;
 }
 
 .score-pill {
@@ -136,4 +137,41 @@ button.secondary {
   padding: 6px 8px;
   border-radius: 999px;
   font-size: 0.95rem;
+}
+
+.card-section {
+  margin-top: 10px;
+}
+
+.card-section h4 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: #7fe0ff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.metric {
+  background: #111f33;
+  border: 1px solid #233654;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.metric span {
+  display: block;
+  font-size: 0.8rem;
+  color: #8eb7dd;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 2px;
+  color: #f2f6ff;
 }
