@@ -368,8 +368,36 @@ function App() {
                   <h3>{listing.title}</h3>
                   <span className="score-pill">{listing.recommendation}</span>
                 </div>
-                <p>{listing.brand} {listing.model} • {listing.year} • {listing.hours} hrs</p>
-                <p>Location: {listing.location ?? 'n/a'}</p>
+
+                <div className="executive-summary">
+                  <div className="summary-primary">
+                    <span className="summary-label">Equipment</span>
+                    <strong>{listing.title}</strong>
+                    <span className="summary-meta">{listing.year ?? 'n/a'} • {listing.hours ?? 'n/a'} hrs • {listing.location ?? 'n/a'}</span>
+                  </div>
+                  <div className="summary-metrics">
+                    <div className="summary-metric">
+                      <span>Score</span>
+                      <strong>{listing.overall_score ?? 'n/a'}/10</strong>
+                    </div>
+                    <div className="summary-metric">
+                      <span>ROI</span>
+                      <strong>{listing.roi_percent ?? 'n/a'}%</strong>
+                    </div>
+                    <div className="summary-metric">
+                      <span>Net profit</span>
+                      <strong>${listing.net_profit?.toLocaleString() ?? listing.expected_profit?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="summary-metric">
+                      <span>Max offer</span>
+                      <strong>${listing.recommended_max_offer?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="summary-metric">
+                      <span>Days to sell</span>
+                      <strong>{listing.expected_days_to_sell ?? 'n/a'}</strong>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="card-section">
                   <h4>Main deal info</h4>

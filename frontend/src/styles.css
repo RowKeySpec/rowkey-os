@@ -157,6 +157,60 @@ button.secondary {
   font-size: 0.95rem;
 }
 
+.executive-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 12px;
+  background: #101c30;
+  border: 1px solid #233654;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.summary-primary {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7fe0ff;
+}
+
+.summary-meta {
+  color: #8eb7dd;
+  font-size: 0.9rem;
+}
+
+.summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.summary-metric {
+  background: #111f33;
+  border: 1px solid #233654;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.summary-metric span {
+  display: block;
+  font-size: 0.74rem;
+  color: #8eb7dd;
+}
+
+.summary-metric strong {
+  display: block;
+  margin-top: 2px;
+  color: #f2f6ff;
+}
+
 .card-section {
   margin-top: 10px;
 }
