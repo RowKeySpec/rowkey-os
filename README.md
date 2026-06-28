@@ -40,6 +40,29 @@ Optional market inputs can be appended after notes:
 brand|model|year|hours|purchasePrice|location|transportCost|repairCost|estimatedResaleValue|notes|comparableLowValue|comparableAverageValue|comparableHighValue|desiredMinimumRoiPercent
 ```
 
+The `/api/listings/import` endpoint is backward compatible and now supports a structured JSON payload with named fields:
+
+```json
+{
+	"brand": "CAT",
+	"model": "320D",
+	"year": 2018,
+	"hours": 6200,
+	"purchase_price": 125000,
+	"location": "Denver",
+	"transport_cost": 3500,
+	"repair_cost": 4500,
+	"estimated_resale_value": 145000,
+	"comparable_low_value": 140000,
+	"comparable_average_value": 150000,
+	"comparable_high_value": 160000,
+	"desired_minimum_roi_percent": 15,
+	"notes": "Serviced and ready to work"
+}
+```
+
+Legacy payloads using `rows: ["..."]` continue to work.
+
 ### Frontend startup
 
 From the frontend folder, run:

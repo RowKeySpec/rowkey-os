@@ -195,28 +195,26 @@ function App() {
     event.preventDefault();
     setStatus('Analyzing deal...');
 
-    const row = [
-      formData.brand,
-      formData.model,
-      formData.year,
-      formData.hours,
-      formData.purchasePrice,
-      formData.location,
-      formData.transportCost,
-      formData.repairCost,
-      formData.estimatedResaleValue,
-      formData.notes,
-      formData.comparableLowValue,
-      formData.comparableAverageValue,
-      formData.comparableHighValue,
-      formData.desiredMinimumRoi
-    ].join('|');
-
     try {
       const response = await fetch(`${API_BASE}/listings/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: [row] })
+        body: JSON.stringify({
+          brand: formData.brand,
+          model: formData.model,
+          year: formData.year || null,
+          hours: formData.hours || null,
+          purchase_price: formData.purchasePrice || null,
+          location: formData.location,
+          transport_cost: formData.transportCost || null,
+          repair_cost: formData.repairCost || null,
+          estimated_resale_value: formData.estimatedResaleValue || null,
+          comparable_low_value: formData.comparableLowValue || null,
+          comparable_average_value: formData.comparableAverageValue || null,
+          comparable_high_value: formData.comparableHighValue || null,
+          desired_minimum_roi_percent: formData.desiredMinimumRoi || null,
+          notes: formData.notes
+        })
       });
       const result = await response.json();
 

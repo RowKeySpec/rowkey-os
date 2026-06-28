@@ -28,7 +28,22 @@ init_db()
 from typing import List
 
 class ImportPayload(BaseModel):
-    rows: List[str]
+    rows: List[str] | None = None
+    listings: List[Dict[str, Any]] | None = None
+    brand: str | None = None
+    model: str | None = None
+    year: int | None = None
+    hours: int | None = None
+    purchase_price: float | str | None = None
+    location: str | None = None
+    transport_cost: float | str | None = None
+    repair_cost: float | str | None = None
+    estimated_resale_value: float | str | None = None
+    comparable_low_value: float | str | None = None
+    comparable_average_value: float | str | None = None
+    comparable_high_value: float | str | None = None
+    desired_minimum_roi_percent: float | str | None = None
+    notes: str | None = None
 
 
 class ListingParsePayload(BaseModel):
@@ -289,6 +304,158 @@ def compute_market_intelligence(
     }
 
 
+def _build_imported_listing(
+    brand: str,
+    model: str,
+    year: int | None,
+    hours: int | None,
+    price: float | None,
+    location: str | None,
+    transport: float | None,
+    repair: float | None,
+    resale: float | None,
+    notes: str | None,
+    comparable_low: float | None,
+    comparable_average: float | None,
+    comparable_high: float | None,
+    desired_min_roi: float | None,
+) -> Dict[str, Any]:
+    safe_brand = (brand or "Unknown").strip() or "Unknown"
+    safe_model = (model or "Unknown").strip() or "Unknown"
+    title = f"{safe_brand} {safe_model}".strip()
+
+    score, reasons, recommendation, metrics = score_listing(
+        {
+            "title": title,
+            "brand": safe_brand,
+            "model": safe_model,
+            "year": year,
+            "hours": hours,
+            "price": price,
+            "location": location,
+            "estimated_transport_cost": transport,
+            "estimated_repair_cost": repair,
+            "estimated_resale_value": resale,
+            "comparable_low_value": comparable_low,
+            "comparable_average_value": comparable_average,
+            "comparable_high_value": comparable_high,
+            "notes": notes,
+        }
+    )
+
+    market_metrics = compute_market_intelligence(
+        price,
+        transport,
+        repair,
+        resale,
+        comparable_low,
+        comparable_average,
+        comparable_high,
+        desired_min_roi,
+    )
+
+    return {
+        "title": title,
+        "brand": safe_brand,
+        "model": safe_model,
+        "year": year,
+        "hours": hours,
+        "price": price,
+        "location": location,
+        "estimated_transport_cost": transport,
+        "estimated_repair_cost": repair,
+        "estimated_resale_value": resale,
+        "comparable_low_value": comparable_low,
+        "comparable_average_value": comparable_average,
+        "comparable_high_value": comparable_high,
+        "notes": notes,
+        "score": round(score, 1),
+        "recommendation": recommendation,
+        "total_cost": metrics["total_cost"],
+        "expected_profit": metrics["expected_profit"],
+        "roi_percent": metrics["roi_percent"],
+        "total_investment": metrics["total_cost"],
+        "estimated_gross_profit": metrics["estimated_gross_profit"] if "estimated_gross_profit" in metrics else None,
+        "net_profit": metrics["expected_profit"],
+        "interest_cost": metrics["interest_cost"],
+        "annualized_roi": metrics["annualized_roi"],
+        "expected_days_to_sell": metrics["expected_days_to_sell"],
+        "recommended_max_offer": metrics["recommended_max_offer"],
+        "overall_score": metrics["overall_score"],
+        "profit_potential": metrics["profit_potential"],
+        "risk": metrics["risk"],
+        "repair_difficulty": metrics["repair_difficulty"],
+        "ease_of_transport": metrics["ease_of_transport"],
+        "market_value_low": market_metrics["market_value_low"],
+        "market_value_average": market_metrics["market_value_average"],
+        "market_value_high": market_metrics["market_value_high"],
+        "target_offer": market_metrics["target_offer"],
+        "max_offer": market_metrics["max_offer"],
+        "walk_away_price": market_metrics["walk_away_price"],
+        "resale_confidence": market_metrics["resale_confidence"],
+        "negotiation_confidence": market_metrics["negotiation_confidence"],
+        "desired_minimum_roi_percent": market_metrics["desired_min_roi"],
+        "desired_min_roi": market_metrics["desired_min_roi"],
+        "reasons": reasons,
+    }
+
+
+def _parse_structured_listing(payload: Dict[str, Any]) -> Dict[str, Any] | None:
+    brand = str(payload.get("brand") or "").strip()
+    model = str(payload.get("model") or "").strip()
+    year = _parse_int(str(payload.get("year"))) if payload.get("year") is not None else None
+    hours = _parse_int(str(payload.get("hours"))) if payload.get("hours") is not None else None
+    price = _parse_float(str(payload.get("purchase_price"))) if payload.get("purchase_price") is not None else None
+    location = str(payload.get("location") or "").strip() or None
+    transport = _parse_float(str(payload.get("transport_cost"))) if payload.get("transport_cost") is not None else None
+    repair = _parse_float(str(payload.get("repair_cost"))) if payload.get("repair_cost") is not None else None
+    resale = _parse_float(str(payload.get("estimated_resale_value"))) if payload.get("estimated_resale_value") is not None else None
+    comparable_low = _parse_float(str(payload.get("comparable_low_value"))) if payload.get("comparable_low_value") is not None else None
+    comparable_average = _parse_float(str(payload.get("comparable_average_value"))) if payload.get("comparable_average_value") is not None else None
+    comparable_high = _parse_float(str(payload.get("comparable_high_value"))) if payload.get("comparable_high_value") is not None else None
+    desired_min_roi = _parse_float(str(payload.get("desired_minimum_roi_percent"))) if payload.get("desired_minimum_roi_percent") is not None else None
+    notes = str(payload.get("notes") or "").strip() or None
+
+    has_any_value = any(
+        value is not None and value != ""
+        for value in [
+            brand,
+            model,
+            year,
+            hours,
+            price,
+            location,
+            transport,
+            repair,
+            resale,
+            comparable_low,
+            comparable_average,
+            comparable_high,
+            desired_min_roi,
+            notes,
+        ]
+    )
+    if not has_any_value:
+        return None
+
+    return _build_imported_listing(
+        brand=brand,
+        model=model,
+        year=year,
+        hours=hours,
+        price=price,
+        location=location,
+        transport=transport,
+        repair=repair,
+        resale=resale,
+        notes=notes,
+        comparable_low=comparable_low,
+        comparable_average=comparable_average,
+        comparable_high=comparable_high,
+        desired_min_roi=desired_min_roi,
+    )
+
+
 def load_listings() -> List[Dict[str, Any]]:
     return list_deals()
 
@@ -352,7 +519,6 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
 
         brand = parts[0] or "Unknown"
         model = parts[1] or "Unknown"
-        title = f"{brand} {model}".strip()
 
         def parse_float(text: str) -> float | None:
             return _parse_float(text)
@@ -376,81 +542,23 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
         comparable_high = parse_float(parts[12]) if len(parts) > 12 else None
         desired_min_roi = parse_float(parts[13]) if len(parts) > 13 else None
 
-        score, reasons, recommendation, metrics = score_listing(
-            {
-                "title": title,
-                "brand": brand,
-                "model": model,
-                "year": year,
-                "hours": hours,
-                "price": price,
-                "location": location,
-                "estimated_transport_cost": transport,
-                "estimated_repair_cost": repair,
-                "estimated_resale_value": resale,
-                "comparable_low_value": comparable_low,
-                "comparable_average_value": comparable_average,
-                "comparable_high_value": comparable_high,
-                "notes": notes,
-            }
-        )
-
-        market_metrics = compute_market_intelligence(
-            price,
-            transport,
-            repair,
-            resale,
-            comparable_low,
-            comparable_average,
-            comparable_high,
-            desired_min_roi,
-        )
-
         parsed.append(
-            {
-                "title": title,
-                "brand": brand,
-                "model": model,
-                "year": year,
-                "hours": hours,
-                "price": price,
-                "location": location,
-                "estimated_transport_cost": transport,
-                "estimated_repair_cost": repair,
-                "estimated_resale_value": resale,
-                "comparable_low_value": comparable_low,
-                "comparable_average_value": comparable_average,
-                "comparable_high_value": comparable_high,
-                "notes": notes,
-                "score": round(score, 1),
-                "recommendation": recommendation,
-                "total_cost": metrics["total_cost"],
-                "expected_profit": metrics["expected_profit"],
-                "roi_percent": metrics["roi_percent"],
-                "total_investment": metrics["total_cost"],
-                "estimated_gross_profit": metrics["estimated_gross_profit"] if "estimated_gross_profit" in metrics else None,
-                "net_profit": metrics["expected_profit"],
-                "interest_cost": metrics["interest_cost"],
-                "annualized_roi": metrics["annualized_roi"],
-                "expected_days_to_sell": metrics["expected_days_to_sell"],
-                "recommended_max_offer": metrics["recommended_max_offer"],
-                "overall_score": metrics["overall_score"],
-                "profit_potential": metrics["profit_potential"],
-                "risk": metrics["risk"],
-                "repair_difficulty": metrics["repair_difficulty"],
-                "ease_of_transport": metrics["ease_of_transport"],
-                "market_value_low": market_metrics["market_value_low"],
-                "market_value_average": market_metrics["market_value_average"],
-                "market_value_high": market_metrics["market_value_high"],
-                "target_offer": market_metrics["target_offer"],
-                "max_offer": market_metrics["max_offer"],
-                "walk_away_price": market_metrics["walk_away_price"],
-                "resale_confidence": market_metrics["resale_confidence"],
-                "negotiation_confidence": market_metrics["negotiation_confidence"],
-                "desired_minimum_roi_percent": market_metrics["desired_min_roi"],
-                "desired_min_roi": market_metrics["desired_min_roi"],
-                "reasons": reasons,
-            }
+            _build_imported_listing(
+                brand=brand,
+                model=model,
+                year=year,
+                hours=hours,
+                price=price,
+                location=location,
+                transport=transport,
+                repair=repair,
+                resale=resale,
+                notes=notes,
+                comparable_low=comparable_low,
+                comparable_average=comparable_average,
+                comparable_high=comparable_high,
+                desired_min_roi=desired_min_roi,
+            )
         )
     return parsed
 
@@ -520,8 +628,21 @@ def export_listings_csv() -> Any:
 
 @app.post("/api/listings/import")
 def import_listings(payload: ImportPayload) -> Dict[str, Any]:
+    imported: List[Dict[str, Any]] = []
+
     try:
-        imported = parse_manual_import("\n".join(payload.rows))
+        if payload.rows:
+            imported.extend(parse_manual_import("\n".join(payload.rows)))
+
+        if payload.listings:
+            for raw_listing in payload.listings:
+                structured_item = _parse_structured_listing(raw_listing)
+                if structured_item:
+                    imported.append(structured_item)
+
+        root_structured = _parse_structured_listing(payload.model_dump())
+        if root_structured:
+            imported.append(root_structured)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

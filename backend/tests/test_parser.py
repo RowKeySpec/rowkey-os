@@ -73,7 +73,7 @@ pydantic_module.BaseModel = BaseModel
 sys.modules.setdefault("pydantic", pydantic_module)
 
 from app.database import clear_deals, list_deals, save_deal
-from app.main import compute_market_intelligence, extract_listing_fields, parse_manual_import
+from app.main import compute_market_intelligence, extract_listing_fields, parse_manual_import, _parse_structured_listing
 
 
 def test_extract_listing_fields_parses_currency_values():
@@ -295,3 +295,52 @@ def test_sqlite_round_trip_preserves_market_intelligence_from_parsed_import():
     assert saved["max_offer"] > 0
     assert saved["walk_away_price"] > 0
     assert saved["negotiation_confidence"] > 0
+
+
+def test_parse_structured_listing_accepts_named_json_fields():
+    parsed = _parse_structured_listing(
+        {
+            "brand": "CAT",
+            "model": "320D",
+            "year": 2018,
+            "hours": 6200,
+            "purchase_price": 125000,
+            "location": "Denver",
+            "transport_cost": 3500,
+            "repair_cost": 4500,
+            "estimated_resale_value": 145000,
+            "comparable_low_value": 140000,
+            "comparable_average_value": 150000,
+            "comparable_high_value": 160000,
+            "desired_minimum_roi_percent": 15,
+            "notes": "Serviced and ready to work",
+        }
+    )
+
+    assert parsed is not None
+    assert parsed["brand"] == "CAT"
+    assert parsed["model"] == "320D"
+    assert parsed["price"] == 125000.0
+    assert parsed["comparable_low_value"] == 140000.0
+    assert parsed["comparable_average_value"] == 150000.0
+    assert parsed["comparable_high_value"] == 160000.0
+    assert parsed["desired_minimum_roi_percent"] == 15.0
+    assert parsed["target_offer"] > 0
+    assert parsed["max_offer"] > 0
+    assert parsed["walk_away_price"] > 0
+    assert parsed["negotiation_confidence"] > 0
+
+
+def test_legacy_rows_parser_remains_backward_compatible():
+    source = "CAT|320D|2018|6200|125000|Denver|3500|4500|145000|Serviced and ready to work|140000|150000|160000|15"
+    parsed = parse_manual_import(source)
+
+    assert len(parsed) == 1
+    item = parsed[0]
+    assert item["brand"] == "CAT"
+    assert item["model"] == "320D"
+    assert item["price"] == 125000.0
+    assert item["comparable_low_value"] == 140000.0
+    assert item["comparable_average_value"] == 150000.0
+    assert item["comparable_high_value"] == 160000.0
+    assert item["desired_minimum_roi_percent"] == 15.0
