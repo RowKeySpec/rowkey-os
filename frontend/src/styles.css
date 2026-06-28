@@ -60,7 +60,7 @@ textarea {
 }
 
 textarea {
-  min-height: 100px;
+  min-height: 120px;
   resize: vertical;
 }
 
@@ -72,6 +72,24 @@ textarea {
   display: flex;
   gap: 10px;
   margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.form-toggle-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.form-toggle-row button {
+  background: #1e3656;
+  color: white;
+}
+
+.form-toggle-row button.secondary {
+  background: #36c6ff;
+  color: #04111f;
 }
 
 button {

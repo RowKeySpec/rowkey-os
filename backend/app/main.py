@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException, Response
@@ -30,6 +31,10 @@ class ImportPayload(BaseModel):
     rows: List[str]
 
 
+class ListingParsePayload(BaseModel):
+    description: str
+
+
 class Listing(BaseModel):
     title: str
     brand: str | None = None
@@ -48,6 +53,136 @@ class Listing(BaseModel):
     expected_profit: float | None = None
     roi_percent: float | None = None
     reasons: List[str] | None = None
+
+
+KNOWN_BRANDS = {
+    "caterpillar": "Caterpillar",
+    "cat": "Caterpillar",
+    "kubota": "Kubota",
+    "takeuchi": "Takeuchi",
+    "bobcat": "Bobcat",
+    "john deere": "John Deere",
+    "johndeere": "John Deere",
+    "deere": "John Deere",
+    "komatsu": "Komatsu",
+    "case": "Case",
+    "new holland": "New Holland",
+    "jcb": "JCB",
+    "doosan": "Doosan",
+    "hitachi": "Hitachi",
+    "volvo": "Volvo",
+}
+
+
+def _normalize_text(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip()
+
+
+def _parse_int(value: str | None) -> int | None:
+    if value is None:
+        return None
+    cleaned = re.sub(r"[^0-9]", "", value)
+    return int(cleaned) if cleaned else None
+
+
+def _parse_float(value: str | None) -> float | None:
+    if value is None:
+        return None
+    cleaned = value.replace("$", "").replace(",", "").strip()
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def extract_listing_fields(description: str) -> Dict[str, Any]:
+    text = _normalize_text(description or "")
+    if not text:
+        return {
+            "brand": None,
+            "model": None,
+            "year": None,
+            "hours": None,
+            "purchasePrice": None,
+            "location": None,
+            "notes": None,
+            "analysis": None,
+        }
+
+    brand = None
+    for key, candidate in KNOWN_BRANDS.items():
+        if re.search(rf"\b{re.escape(key)}\b", text, re.IGNORECASE):
+            brand = candidate
+            break
+
+    model = None
+    if brand:
+        match = re.search(rf"{re.escape(brand)}\s+([A-Za-z0-9\-/]+)", text, re.IGNORECASE)
+        if match:
+            model = match.group(1).strip(" ,;:-")
+    if not model:
+        model_match = re.search(r"(?:model|mdl)\s*[:#-]?\s*([A-Za-z0-9\-/]+)", text, re.IGNORECASE)
+        if model_match:
+            model = model_match.group(1).strip(" ,;:-")
+
+    year = None
+    year_match = re.search(r"\b((19|20)\d{2})\b", text)
+    if year_match:
+        year = int(year_match.group(1))
+
+    hours = None
+    hours_match = re.search(r"\b(\d{1,3}(?:,\d{3})*|\d+)\s*(?:hrs?|hours?|operating hours?|hour meter)\b", text, re.IGNORECASE)
+    if hours_match:
+        hours = _parse_int(hours_match.group(1))
+
+    purchase_price = None
+    price_keyword_pattern = re.compile(
+        r"(?:price|asking|listed|cash price|sale price|buy now)\s*(?:is|:|=|-)?\s*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
+        re.IGNORECASE,
+    )
+    price_keyword_match = price_keyword_pattern.search(text)
+    if price_keyword_match:
+        purchase_price = _parse_float(price_keyword_match.group(1))
+    else:
+        currency_matches = re.findall(r"\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)", text)
+        if len(currency_matches) == 1:
+            purchase_price = _parse_float(currency_matches[0])
+
+    location = None
+    location_match = re.search(r"(?:location|located|city)\s*(?:in|:)?\s*([A-Za-z0-9 .,'-]+)", text, re.IGNORECASE)
+    if location_match:
+        location = location_match.group(1).strip(" ,;:-")
+
+    notes = None
+    if text:
+        notes = text[:1000]
+
+    analysis = None
+    parsed_listing = {
+        "brand": brand,
+        "model": model,
+        "year": year,
+        "hours": hours,
+        "price": purchase_price,
+        "location": location,
+        "estimated_transport_cost": None,
+        "estimated_repair_cost": None,
+        "estimated_resale_value": None,
+        "notes": notes,
+    }
+    if brand or model or year or hours or purchase_price or location or notes:
+        analysis = score_listing(parsed_listing)[3]
+
+    return {
+        "brand": brand,
+        "model": model,
+        "year": year,
+        "hours": hours,
+        "purchasePrice": purchase_price,
+        "location": location,
+        "notes": notes,
+        "analysis": analysis,
+    }
 
 
 def load_listings() -> List[Dict[str, Any]]:
@@ -185,6 +320,15 @@ def health() -> Dict[str, str]:
 @app.get("/api/listings")
 def get_listings() -> List[Dict[str, Any]]:
     return load_listings()
+
+
+@app.post("/api/listings/parse")
+def parse_listing_description(payload: ListingParsePayload) -> Dict[str, Any]:
+    extracted = extract_listing_fields(payload.description)
+    return {
+        "extracted": extracted,
+        "ready": True,
+    }
 
 
 @app.get("/api/listings/export.csv")

@@ -15,6 +15,8 @@ const emptyForm = {
   notes: ''
 };
 
+const emptyListingDescription = '';
+
 function toNumber(value) {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : 0;
@@ -82,9 +84,11 @@ function normalizeListing(listing = {}) {
 
 function App() {
   const [formData, setFormData] = useState(emptyForm);
+  const [listingDescription, setListingDescription] = useState(emptyListingDescription);
   const [listings, setListings] = useState([]);
   const [status, setStatus] = useState('Analyze a deal to see its projected ROI.');
   const [analysis, setAnalysis] = useState(null);
+  const [showManualForm, setShowManualForm] = useState(true);
 
   async function loadListings() {
     try {
@@ -106,6 +110,49 @@ function App() {
   function handleFieldChange(event) {
     const { name, value } = event.target;
     setFormData((previous) => ({ ...previous, [name]: value }));
+  }
+
+  function handleListingDescriptionChange(event) {
+    setListingDescription(event.target.value);
+  }
+
+  async function handleAutoFillFromListing(event) {
+    event.preventDefault();
+    if (!listingDescription.trim()) {
+      setStatus('Paste a listing description first.');
+      return;
+    }
+
+    setStatus('Parsing listing description...');
+    try {
+      const response = await fetch(`${API_BASE}/listings/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: listingDescription })
+      });
+      const result = await response.json();
+
+      if (response.ok && result.extracted) {
+        const extracted = result.extracted;
+        setFormData({
+          ...emptyForm,
+          brand: extracted.brand || '',
+          model: extracted.model || '',
+          year: extracted.year ?? '',
+          hours: extracted.hours ?? '',
+          purchasePrice: extracted.purchasePrice ?? '',
+          location: extracted.location || '',
+          notes: extracted.notes || ''
+        });
+        setShowManualForm(true);
+        setStatus('Auto-filled the form from the listing description.');
+      } else {
+        setStatus('Unable to extract listing details.');
+      }
+    } catch (error) {
+      setStatus('Listing parsing failed.');
+      console.error(error);
+    }
   }
 
   async function handleAnalyzeDeal(event) {
@@ -191,13 +238,41 @@ function App() {
       </section>
 
       <section className="card">
-        <h2>Equipment deal form</h2>
+        <h2>AI Listing Import Assistant</h2>
+        <p>Paste a full marketplace listing description and let the assistant extract the core equipment details before you analyze the deal.</p>
         <form onSubmit={handleAnalyzeDeal} className="deal-form">
-          <div className="form-grid">
-            <label>
-              Brand
-              <input name="brand" value={formData.brand} onChange={handleFieldChange} placeholder="CAT" />
-            </label>
+          <label className="full-width">
+            Listing Description
+            <textarea
+              name="listingDescription"
+              value={listingDescription}
+              onChange={handleListingDescriptionChange}
+              placeholder="Paste the full Marketplace, Craigslist, MachineryTrader, or similar listing here..."
+            />
+          </label>
+
+          <div className="actions">
+            <button type="button" onClick={handleAutoFillFromListing}>Auto Fill from Listing</button>
+            <button type="button" className="secondary" onClick={() => { setListingDescription(emptyListingDescription); setFormData(emptyForm); setStatus('Cleared the listing assistant inputs.'); }}>
+              Clear Assistant
+            </button>
+          </div>
+
+          <div className="form-toggle-row">
+            <button type="button" className={showManualForm ? 'secondary' : ''} onClick={() => setShowManualForm(true)}>
+              Manual Entry
+            </button>
+            <button type="button" className={!showManualForm ? 'secondary' : ''} onClick={() => setShowManualForm(false)}>
+              Hide Manual Form
+            </button>
+          </div>
+
+          {showManualForm ? (
+            <div className="form-grid">
+              <label>
+                Brand
+                <input name="brand" value={formData.brand} onChange={handleFieldChange} placeholder="CAT" />
+              </label>
             <label>
               Model
               <input name="model" value={formData.model} onChange={handleFieldChange} placeholder="320D" />
@@ -230,11 +305,12 @@ function App() {
               Estimated Resale Value
               <input name="estimatedResaleValue" type="number" value={formData.estimatedResaleValue} onChange={handleFieldChange} placeholder="145000" />
             </label>
-            <label className="full-width">
-              Notes
-              <textarea name="notes" value={formData.notes} onChange={handleFieldChange} placeholder="Serviced and ready to work" />
-            </label>
-          </div>
+              <label className="full-width">
+                Notes
+                <textarea name="notes" value={formData.notes} onChange={handleFieldChange} placeholder="Serviced and ready to work" />
+              </label>
+            </div>
+          ) : null}
 
           <div className="actions">
             <button type="submit">Analyze Deal</button>
