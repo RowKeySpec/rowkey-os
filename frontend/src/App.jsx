@@ -12,6 +12,10 @@ const emptyForm = {
   transportCost: '',
   repairCost: '',
   estimatedResaleValue: '',
+  comparableLowValue: '',
+  comparableAverageValue: '',
+  comparableHighValue: '',
+  desiredMinimumRoi: '',
   notes: ''
 };
 
@@ -45,6 +49,21 @@ function normalizeListing(listing = {}) {
   const repairDifficulty = listing.repair_difficulty ?? null;
   const easeOfTransport = listing.ease_of_transport ?? null;
   const recommendation = listing.recommendation ?? (roiPercent >= 25 ? 'BUY_NOW' : roiPercent >= 15 ? 'NEGOTIATE' : 'PASS');
+  const marketValueLow = toNumber(
+    listing.market_value_low ?? listing.comparable_low_value ?? listing.comparable_low ?? listing.estimated_resale_value ?? 0
+  );
+  const marketValueAverage = toNumber(
+    listing.market_value_average ?? listing.comparable_average_value ?? listing.comparable_average ?? listing.estimated_resale_value ?? 0
+  );
+  const marketValueHigh = toNumber(
+    listing.market_value_high ?? listing.comparable_high_value ?? listing.comparable_high ?? listing.estimated_resale_value ?? 0
+  );
+  const desiredMinRoi = toNumber(listing.desired_minimum_roi_percent ?? listing.desired_min_roi ?? 15);
+  const targetOffer = toNumber(listing.target_offer ?? 0);
+  const maxOffer = toNumber(listing.max_offer ?? 0);
+  const walkAwayPrice = toNumber(listing.walk_away_price ?? 0);
+  const resaleConfidence = listing.resale_confidence ?? 'Medium';
+  const negotiationConfidence = listing.negotiation_confidence ?? 0;
   const reasons = Array.isArray(listing.reasons) && listing.reasons.length
     ? listing.reasons
     : [
@@ -78,6 +97,19 @@ function normalizeListing(listing = {}) {
     repair_difficulty: repairDifficulty,
     ease_of_transport: easeOfTransport,
     recommendation,
+    market_value_low: marketValueLow,
+    market_value_average: marketValueAverage,
+    market_value_high: marketValueHigh,
+    comparable_low_value: toNumber(listing.comparable_low_value ?? listing.comparable_low ?? 0),
+    comparable_average_value: toNumber(listing.comparable_average_value ?? listing.comparable_average ?? 0),
+    comparable_high_value: toNumber(listing.comparable_high_value ?? listing.comparable_high ?? 0),
+    target_offer: targetOffer,
+    max_offer: maxOffer,
+    walk_away_price: walkAwayPrice,
+    resale_confidence: resaleConfidence,
+    negotiation_confidence: negotiationConfidence,
+    desired_minimum_roi_percent: desiredMinRoi,
+    desired_min_roi: desiredMinRoi,
     reasons,
   };
 }
@@ -169,7 +201,11 @@ function App() {
       formData.transportCost,
       formData.repairCost,
       formData.estimatedResaleValue,
-      formData.notes
+      formData.notes,
+      formData.comparableLowValue,
+      formData.comparableAverageValue,
+      formData.comparableHighValue,
+      formData.desiredMinimumRoi
     ].join('|');
 
     try {
@@ -304,6 +340,22 @@ function App() {
             <label>
               Estimated Resale Value
               <input name="estimatedResaleValue" type="number" value={formData.estimatedResaleValue} onChange={handleFieldChange} placeholder="145000" />
+            </label>
+            <label>
+              Comparable Low Value
+              <input name="comparableLowValue" type="number" value={formData.comparableLowValue} onChange={handleFieldChange} placeholder="140000" />
+            </label>
+            <label>
+              Comparable Average Value
+              <input name="comparableAverageValue" type="number" value={formData.comparableAverageValue} onChange={handleFieldChange} placeholder="150000" />
+            </label>
+            <label>
+              Comparable High Value
+              <input name="comparableHighValue" type="number" value={formData.comparableHighValue} onChange={handleFieldChange} placeholder="160000" />
+            </label>
+            <label>
+              Desired Minimum ROI %
+              <input name="desiredMinimumRoi" type="number" value={formData.desiredMinimumRoi} onChange={handleFieldChange} placeholder="15" />
             </label>
               <label className="full-width">
                 Notes
@@ -469,6 +521,44 @@ function App() {
                     <div className="metric">
                       <span>Ease of transport</span>
                       <strong>{listing.ease_of_transport ?? 'n/a'}/10</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card-section">
+                  <h4>Market Intelligence</h4>
+                  <div className="metric-grid">
+                    <div className="metric">
+                      <span>Market low</span>
+                      <strong>${listing.market_value_low?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Market average</span>
+                      <strong>${listing.market_value_average?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Market high</span>
+                      <strong>${listing.market_value_high?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Target offer</span>
+                      <strong>${listing.target_offer?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Max offer</span>
+                      <strong>${listing.max_offer?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Walk-away price</span>
+                      <strong>${listing.walk_away_price?.toLocaleString() ?? 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Resale confidence</span>
+                      <strong>{listing.resale_confidence || 'n/a'}</strong>
+                    </div>
+                    <div className="metric">
+                      <span>Negotiation confidence</span>
+                      <strong>{listing.negotiation_confidence ?? 'n/a'}%</strong>
                     </div>
                   </div>
                 </div>

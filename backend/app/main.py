@@ -189,6 +189,69 @@ def extract_listing_fields(description: str) -> Dict[str, Any]:
     }
 
 
+def compute_market_intelligence(
+    purchase_price: float | None,
+    transport_cost: float | None,
+    repair_cost: float | None,
+    estimated_resale_value: float | None,
+    comparable_low: float | None = None,
+    comparable_average: float | None = None,
+    comparable_high: float | None = None,
+    desired_min_roi: float | None = None,
+) -> Dict[str, Any]:
+    resale_reference = float(estimated_resale_value or 0.0)
+    market_low = float(comparable_low or 0.0)
+    market_average = float(comparable_average or 0.0)
+    market_high = float(comparable_high or 0.0)
+
+    if market_average <= 0:
+        if market_low > 0 and market_high > 0:
+            market_average = (market_low + market_high) / 2.0
+        else:
+            market_average = resale_reference
+
+    if market_low <= 0:
+        market_low = market_average or resale_reference
+    if market_high <= 0:
+        market_high = market_average or resale_reference
+
+    if market_average <= 0:
+        market_average = resale_reference
+    if resale_reference <= 0:
+        resale_reference = market_average
+
+    desired_roi = float(desired_min_roi or 15.0)
+    transport = float(transport_cost or 0.0)
+    repair = float(repair_cost or 0.0)
+    walk_away_price = max(0.0, (market_average / (1.0 + (desired_roi / 100.0))) - transport - repair)
+    max_offer = walk_away_price
+    target_offer = max(0.0, walk_away_price * 0.90)
+
+    spread_pct = 0.0
+    if market_average > 0:
+        spread_pct = ((market_high - market_low) / market_average) * 100.0
+    if spread_pct <= 8.0:
+        resale_confidence = "High"
+    elif spread_pct <= 20.0:
+        resale_confidence = "Medium"
+    else:
+        resale_confidence = "Low"
+
+    negotiation_confidence = round(max(20.0, min(95.0, 100.0 - min(60.0, spread_pct * 2.0) - max(0.0, (desired_roi - 15.0) * 2.0))), 0)
+
+    return {
+        "market_value_low": round(market_low, 2),
+        "market_value_average": round(market_average, 2),
+        "market_value_high": round(market_high, 2),
+        "target_offer": round(target_offer, 2),
+        "max_offer": round(max_offer, 2),
+        "walk_away_price": round(walk_away_price, 2),
+        "resale_confidence": resale_confidence,
+        "negotiation_confidence": int(negotiation_confidence),
+        "desired_min_roi": round(desired_roi, 2),
+    }
+
+
 def load_listings() -> List[Dict[str, Any]]:
     return list_deals()
 
@@ -222,6 +285,18 @@ def save_listings(listings: List[Dict[str, Any]]) -> None:
                 "risk": listing.get("risk"),
                 "repair_difficulty": listing.get("repair_difficulty"),
                 "ease_of_transport": listing.get("ease_of_transport"),
+                "comparable_low_value": listing.get("comparable_low_value"),
+                "comparable_average_value": listing.get("comparable_average_value"),
+                "comparable_high_value": listing.get("comparable_high_value"),
+                "desired_minimum_roi_percent": listing.get("desired_minimum_roi_percent", listing.get("desired_min_roi")),
+                "market_value_low": listing.get("market_value_low"),
+                "market_value_average": listing.get("market_value_average"),
+                "market_value_high": listing.get("market_value_high"),
+                "target_offer": listing.get("target_offer"),
+                "max_offer": listing.get("max_offer"),
+                "walk_away_price": listing.get("walk_away_price"),
+                "resale_confidence": listing.get("resale_confidence"),
+                "negotiation_confidence": listing.get("negotiation_confidence"),
             }
         )
 
@@ -233,9 +308,9 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
         if not line:
             continue
         parts = [part.strip() for part in line.split("|")]
-        if len(parts) != 10:
+        if len(parts) < 10:
             raise ValueError(
-                f"Expected 10 pipe-delimited fields for equipment rows, received {len(parts)}: {line}"
+                f"Expected at least 10 pipe-delimited fields for equipment rows, received {len(parts)}: {line}"
             )
 
         brand = parts[0] or "Unknown"
@@ -263,6 +338,10 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
         repair = parse_float(parts[7])
         resale = parse_float(parts[8])
         notes = parts[9]
+        comparable_low = parse_float(parts[10]) if len(parts) > 10 else None
+        comparable_average = parse_float(parts[11]) if len(parts) > 11 else None
+        comparable_high = parse_float(parts[12]) if len(parts) > 12 else None
+        desired_min_roi = parse_float(parts[13]) if len(parts) > 13 else None
 
         score, reasons, recommendation, metrics = score_listing(
             {
@@ -276,8 +355,22 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
                 "estimated_transport_cost": transport,
                 "estimated_repair_cost": repair,
                 "estimated_resale_value": resale,
+                "comparable_low_value": comparable_low,
+                "comparable_average_value": comparable_average,
+                "comparable_high_value": comparable_high,
                 "notes": notes,
             }
+        )
+
+        market_metrics = compute_market_intelligence(
+            price,
+            transport,
+            repair,
+            resale,
+            comparable_low,
+            comparable_average,
+            comparable_high,
+            desired_min_roi,
         )
 
         parsed.append(
@@ -292,6 +385,9 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
                 "estimated_transport_cost": transport,
                 "estimated_repair_cost": repair,
                 "estimated_resale_value": resale,
+                "comparable_low_value": comparable_low,
+                "comparable_average_value": comparable_average,
+                "comparable_high_value": comparable_high,
                 "notes": notes,
                 "score": round(score, 1),
                 "recommendation": recommendation,
@@ -310,6 +406,16 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
                 "risk": metrics["risk"],
                 "repair_difficulty": metrics["repair_difficulty"],
                 "ease_of_transport": metrics["ease_of_transport"],
+                "market_value_low": market_metrics["market_value_low"],
+                "market_value_average": market_metrics["market_value_average"],
+                "market_value_high": market_metrics["market_value_high"],
+                "target_offer": market_metrics["target_offer"],
+                "max_offer": market_metrics["max_offer"],
+                "walk_away_price": market_metrics["walk_away_price"],
+                "resale_confidence": market_metrics["resale_confidence"],
+                "negotiation_confidence": market_metrics["negotiation_confidence"],
+                "desired_minimum_roi_percent": market_metrics["desired_min_roi"],
+                "desired_min_roi": market_metrics["desired_min_roi"],
                 "reasons": reasons,
             }
         )
@@ -419,6 +525,19 @@ def import_listings(payload: ImportPayload) -> Dict[str, Any]:
                 "risk": listing.get("risk"),
                 "repair_difficulty": listing.get("repair_difficulty"),
                 "ease_of_transport": listing.get("ease_of_transport"),
+                "market_value_low": listing.get("market_value_low"),
+                "market_value_average": listing.get("market_value_average"),
+                "market_value_high": listing.get("market_value_high"),
+                "target_offer": listing.get("target_offer"),
+                "max_offer": listing.get("max_offer"),
+                "walk_away_price": listing.get("walk_away_price"),
+                "resale_confidence": listing.get("resale_confidence"),
+                "negotiation_confidence": listing.get("negotiation_confidence"),
+                "comparable_low_value": listing.get("comparable_low_value"),
+                "comparable_average_value": listing.get("comparable_average_value"),
+                "comparable_high_value": listing.get("comparable_high_value"),
+                "desired_minimum_roi_percent": listing.get("desired_minimum_roi_percent", listing.get("desired_min_roi")),
+                "desired_min_roi": listing.get("desired_min_roi"),
             }
         )
 

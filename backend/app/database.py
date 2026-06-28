@@ -44,6 +44,18 @@ class EquipmentDeal(Base):
     risk = Column(Float, nullable=True)
     repair_difficulty = Column(Float, nullable=True)
     ease_of_transport = Column(Float, nullable=True)
+    comparable_low_value = Column(Float, nullable=True)
+    comparable_average_value = Column(Float, nullable=True)
+    comparable_high_value = Column(Float, nullable=True)
+    desired_minimum_roi_percent = Column(Float, nullable=True)
+    market_value_low = Column(Float, nullable=True)
+    market_value_average = Column(Float, nullable=True)
+    market_value_high = Column(Float, nullable=True)
+    target_offer = Column(Float, nullable=True)
+    max_offer = Column(Float, nullable=True)
+    walk_away_price = Column(Float, nullable=True)
+    resale_confidence = Column(String, nullable=True)
+    negotiation_confidence = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
@@ -66,6 +78,18 @@ def _ensure_columns() -> None:
         "risk": "FLOAT",
         "repair_difficulty": "FLOAT",
         "ease_of_transport": "FLOAT",
+        "comparable_low_value": "FLOAT",
+        "comparable_average_value": "FLOAT",
+        "comparable_high_value": "FLOAT",
+        "desired_minimum_roi_percent": "FLOAT",
+        "market_value_low": "FLOAT",
+        "market_value_average": "FLOAT",
+        "market_value_high": "FLOAT",
+        "target_offer": "FLOAT",
+        "max_offer": "FLOAT",
+        "walk_away_price": "FLOAT",
+        "resale_confidence": "TEXT",
+        "negotiation_confidence": "INTEGER",
     }
 
     for column_name, column_type in columns_to_add.items():
@@ -115,6 +139,22 @@ def serialize_deal(deal: EquipmentDeal) -> Dict[str, Any]:
         "risk": deal.risk,
         "repair_difficulty": deal.repair_difficulty,
         "ease_of_transport": deal.ease_of_transport,
+        "comparable_low_value": deal.comparable_low_value,
+        "comparable_average_value": deal.comparable_average_value,
+        "comparable_high_value": deal.comparable_high_value,
+        "desired_minimum_roi_percent": deal.desired_minimum_roi_percent,
+        "market_value_low": deal.market_value_low,
+        "market_value_average": deal.market_value_average,
+        "market_value_high": deal.market_value_high,
+        "target_offer": deal.target_offer,
+        "max_offer": deal.max_offer,
+        "walk_away_price": deal.walk_away_price,
+        "resale_confidence": deal.resale_confidence,
+        "negotiation_confidence": deal.negotiation_confidence,
+        "comparable_low": deal.comparable_low_value,
+        "comparable_average": deal.comparable_average_value,
+        "comparable_high": deal.comparable_high_value,
+        "desired_min_roi": deal.desired_minimum_roi_percent,
         "created_at": deal.created_at.isoformat() if deal.created_at else None,
     }
 
@@ -145,6 +185,18 @@ def save_deal(payload: Dict[str, Any]) -> EquipmentDeal:
         risk=payload.get("risk"),
         repair_difficulty=payload.get("repair_difficulty"),
         ease_of_transport=payload.get("ease_of_transport"),
+        comparable_low_value=payload.get("comparable_low_value", payload.get("comparable_low")),
+        comparable_average_value=payload.get("comparable_average_value", payload.get("comparable_average")),
+        comparable_high_value=payload.get("comparable_high_value", payload.get("comparable_high")),
+        desired_minimum_roi_percent=payload.get("desired_minimum_roi_percent", payload.get("desired_min_roi")),
+        market_value_low=payload.get("market_value_low"),
+        market_value_average=payload.get("market_value_average"),
+        market_value_high=payload.get("market_value_high"),
+        target_offer=payload.get("target_offer"),
+        max_offer=payload.get("max_offer"),
+        walk_away_price=payload.get("walk_away_price"),
+        resale_confidence=payload.get("resale_confidence"),
+        negotiation_confidence=payload.get("negotiation_confidence"),
     )
     db = SessionLocal()
     try:

@@ -6,6 +6,8 @@ Phase 1 MVP for a lightweight heavy equipment opportunity workspace.
 
 - FastAPI backend with a manual import endpoint and a simple equipment ROI scoring engine
 - React-style single-page dashboard for reviewing equipment opportunities
+- AI listing import assistant for natural-language listing parsing
+- Market Intelligence and Offer Strategy metrics on each deal card
 - Docker Compose setup for local development
 - README and workspace-local data storage
 
@@ -30,6 +32,12 @@ Then open http://localhost:8000/docs for API docs, and open the frontend file di
 ```text
 CAT|320D|2018|6200|125000|Denver|3500|4500|145000|Serviced and ready to work
 Komatsu|PC200|2016|9800|110000|Phoenix|2800|6000|128000|Hydraulic leak repaired
+```
+
+Optional market inputs can be appended after notes:
+
+```text
+brand|model|year|hours|purchasePrice|location|transportCost|repairCost|estimatedResaleValue|notes|comparableLowValue|comparableAverageValue|comparableHighValue|desiredMinimumRoiPercent
 ```
 
 ### Frontend startup
@@ -68,6 +76,21 @@ It calculates:
 - recommended_max_offer = suggested ceiling for the purchase price based on margin targets
 - overall_score, profit_potential, risk, repair_difficulty, and ease_of_transport
 
+Market Intelligence and Offer Strategy also calculate:
+
+- comparable_low_value, comparable_average_value, comparable_high_value
+- desired_minimum_roi_percent
+- market_value_low, market_value_average, market_value_high
+- target_offer, max_offer, walk_away_price
+- resale_confidence, negotiation_confidence
+
+Offer strategy behavior:
+
+- Comparable inputs are used when provided; otherwise market value falls back to estimated resale.
+- Walk-away price applies the minimum ROI target after transport and repair costs.
+- Target offer is intentionally below walk-away price to preserve room for negotiation.
+- Confidence signals are based on market spread and ROI aggressiveness.
+
 Business rules:
 
 - Target minimum equipment margin: 20%
@@ -89,4 +112,5 @@ Recommendation rules:
 - Deal data is now stored locally in SQLite at backend/app/data/deals.db.
 - The database is created automatically on startup via the initialization step.
 - You can export all stored deals as CSV from the dashboard or via GET /api/listings/export.csv.
+- Market intelligence fields are persisted to SQLite and returned by GET /api/listings after reload.
 - This Phase 1 implementation intentionally keeps the experience simple and manual.
