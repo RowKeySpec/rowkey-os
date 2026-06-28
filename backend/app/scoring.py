@@ -154,6 +154,7 @@ def score_listing(listing: Dict[str, Any]) -> Tuple[float, List[str], str, Dict[
     metrics = {
         "total_cost": analysis["total_investment"],
         "expected_profit": analysis["net_profit"],
+        "estimated_gross_profit": analysis["estimated_gross_profit"],
         "roi_percent": analysis["roi_percent"],
         "overall_score": analysis["overall_score"],
         "profit_potential": analysis["profit_potential"],

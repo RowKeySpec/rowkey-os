@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, create_engine
+from sqlalchemy import Column, DateTime, Float, Integer, String, create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -32,11 +32,51 @@ class EquipmentDeal(Base):
     notes = Column(String, nullable=True)
     roi = Column(Float, nullable=True)
     recommendation = Column(String, nullable=True)
+    total_investment = Column(Float, nullable=True)
+    estimated_gross_profit = Column(Float, nullable=True)
+    net_profit = Column(Float, nullable=True)
+    interest_cost = Column(Float, nullable=True)
+    annualized_roi = Column(Float, nullable=True)
+    expected_days_to_sell = Column(Integer, nullable=True)
+    recommended_max_offer = Column(Float, nullable=True)
+    overall_score = Column(Float, nullable=True)
+    profit_potential = Column(Float, nullable=True)
+    risk = Column(Float, nullable=True)
+    repair_difficulty = Column(Float, nullable=True)
+    ease_of_transport = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+def _ensure_columns() -> None:
+    inspector = inspect(engine)
+    if not inspector.has_table("equipment_deals"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("equipment_deals")}
+    columns_to_add = {
+        "total_investment": "FLOAT",
+        "estimated_gross_profit": "FLOAT",
+        "net_profit": "FLOAT",
+        "interest_cost": "FLOAT",
+        "annualized_roi": "FLOAT",
+        "expected_days_to_sell": "INTEGER",
+        "recommended_max_offer": "FLOAT",
+        "overall_score": "FLOAT",
+        "profit_potential": "FLOAT",
+        "risk": "FLOAT",
+        "repair_difficulty": "FLOAT",
+        "ease_of_transport": "FLOAT",
+    }
+
+    for column_name, column_type in columns_to_add.items():
+        if column_name not in existing_columns:
+            with engine.begin() as connection:
+                connection.execute(text(f"ALTER TABLE equipment_deals ADD COLUMN {column_name} {column_type}"))
 
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
 
 
 def get_db_session():
@@ -63,6 +103,18 @@ def serialize_deal(deal: EquipmentDeal) -> Dict[str, Any]:
         "notes": deal.notes,
         "roi_percent": deal.roi,
         "recommendation": deal.recommendation,
+        "total_investment": deal.total_investment,
+        "estimated_gross_profit": deal.estimated_gross_profit,
+        "net_profit": deal.net_profit,
+        "interest_cost": deal.interest_cost,
+        "annualized_roi": deal.annualized_roi,
+        "expected_days_to_sell": deal.expected_days_to_sell,
+        "recommended_max_offer": deal.recommended_max_offer,
+        "overall_score": deal.overall_score,
+        "profit_potential": deal.profit_potential,
+        "risk": deal.risk,
+        "repair_difficulty": deal.repair_difficulty,
+        "ease_of_transport": deal.ease_of_transport,
         "created_at": deal.created_at.isoformat() if deal.created_at else None,
     }
 
@@ -81,6 +133,18 @@ def save_deal(payload: Dict[str, Any]) -> EquipmentDeal:
         notes=payload.get("notes"),
         roi=payload.get("roi"),
         recommendation=payload.get("recommendation"),
+        total_investment=payload.get("total_investment"),
+        estimated_gross_profit=payload.get("estimated_gross_profit"),
+        net_profit=payload.get("net_profit"),
+        interest_cost=payload.get("interest_cost"),
+        annualized_roi=payload.get("annualized_roi"),
+        expected_days_to_sell=payload.get("expected_days_to_sell"),
+        recommended_max_offer=payload.get("recommended_max_offer"),
+        overall_score=payload.get("overall_score"),
+        profit_potential=payload.get("profit_potential"),
+        risk=payload.get("risk"),
+        repair_difficulty=payload.get("repair_difficulty"),
+        ease_of_transport=payload.get("ease_of_transport"),
     )
     db = SessionLocal()
     try:

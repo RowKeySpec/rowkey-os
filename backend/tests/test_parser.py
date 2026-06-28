@@ -83,3 +83,9 @@ def test_parse_manual_import_accepts_equipment_row():
     assert item["estimated_repair_cost"] == 1500.0
     assert item["estimated_resale_value"] == 43000.0
     assert item["notes"] == "Clean machine"
+    assert item["overall_score"] is not None
+    assert item["profit_potential"] is not None
+    assert item["risk"] is not None
+    assert item["repair_difficulty"] is not None
+    assert item["ease_of_transport"] is not None
+    assert item["expected_days_to_sell"] is not None
