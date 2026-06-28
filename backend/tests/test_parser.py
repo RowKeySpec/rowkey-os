@@ -91,6 +91,16 @@ def test_extract_listing_fields_parses_currency_values():
         assert extracted["purchasePrice"] == expected, description
 
 
+def test_extract_listing_fields_parses_independent_comps_and_desired_roi():
+    extracted = extract_listing_fields(
+        "CAT 320D low 140000 average 150000 high 160000 desired ROI 15% located in Denver"
+    )
+    assert extracted["comparableLowValue"] == 140000.0
+    assert extracted["comparableAverageValue"] == 150000.0
+    assert extracted["comparableHighValue"] == 160000.0
+    assert extracted["desiredMinimumRoiPercent"] == 15.0
+
+
 def test_compute_market_intelligence_uses_comps_and_roi_targets():
     metrics = compute_market_intelligence(
         purchase_price=32000.0,
@@ -147,6 +157,27 @@ def test_parse_manual_import_preserves_six_figure_and_labeled_market_values():
     assert item["max_offer"] > 0
     assert item["walk_away_price"] > 0
     assert item["negotiation_confidence"] > 0
+
+
+def test_offer_strategy_calculates_with_valid_comps_and_roi():
+    metrics = compute_market_intelligence(
+        purchase_price=125000.0,
+        transport_cost=3500.0,
+        repair_cost=4500.0,
+        estimated_resale_value=145000.0,
+        comparable_low=140000.0,
+        comparable_average=150000.0,
+        comparable_high=160000.0,
+        desired_min_roi=15.0,
+    )
+
+    assert metrics["market_value_low"] == 140000.0
+    assert metrics["market_value_average"] == 150000.0
+    assert metrics["market_value_high"] == 160000.0
+    assert metrics["target_offer"] > 0
+    assert metrics["max_offer"] > 0
+    assert metrics["walk_away_price"] > 0
+    assert metrics["negotiation_confidence"] > 0
 
 
 def test_parse_manual_import_accepts_equipment_row():

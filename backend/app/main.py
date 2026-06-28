@@ -113,6 +113,28 @@ def _extract_currency_value(text: str) -> float | None:
     return None
 
 
+def _extract_labeled_value(text: str, labels: list[str]) -> float | None:
+    for label in labels:
+        pattern = rf"\b{label}\b\s*(?:value|price|comp|comparable|is|:|=|-)?\s*\$?\s*(\d[\d,]*(?:\.\d{{1,2}})?)"
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return _parse_float(match.group(1))
+    return None
+
+
+def _extract_desired_roi(text: str) -> float | None:
+    patterns = [
+        r"\b(?:desired|min(?:imum)?|target)\s*roi\s*(?:%|percent|pct)?\s*(?:is|:|=|-)?\s*(\d+(?:\.\d+)?)",
+        r"\broi\s*(?:target|min(?:imum)?)\s*(?:%|percent|pct)?\s*(?:is|:|=|-)?\s*(\d+(?:\.\d+)?)",
+        r"\b(\d+(?:\.\d+)?)\s*(?:%|percent|pct)\s*(?:min(?:imum)?|target|desired)\s*roi\b",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return _parse_float(match.group(1))
+    return None
+
+
 def extract_listing_fields(description: str) -> Dict[str, Any]:
     text = _normalize_text(description or "")
     if not text:
@@ -122,6 +144,10 @@ def extract_listing_fields(description: str) -> Dict[str, Any]:
             "year": None,
             "hours": None,
             "purchasePrice": None,
+            "comparableLowValue": None,
+            "comparableAverageValue": None,
+            "comparableHighValue": None,
+            "desiredMinimumRoiPercent": None,
             "location": None,
             "notes": None,
             "analysis": None,
@@ -154,6 +180,10 @@ def extract_listing_fields(description: str) -> Dict[str, Any]:
         hours = _parse_int(hours_match.group(1))
 
     purchase_price = _extract_currency_value(text)
+    comparable_low_value = _extract_labeled_value(text, ["low", "comp low", "comparable low"])
+    comparable_average_value = _extract_labeled_value(text, ["average", "avg", "comp average", "comparable average"])
+    comparable_high_value = _extract_labeled_value(text, ["high", "comp high", "comparable high"])
+    desired_minimum_roi_percent = _extract_desired_roi(text)
 
     location = None
     location_match = re.search(r"(?:location|located|city)\s*(?:in|:)?\s*([A-Za-z0-9 .,'-]+)", text, re.IGNORECASE)
@@ -186,6 +216,10 @@ def extract_listing_fields(description: str) -> Dict[str, Any]:
         "year": year,
         "hours": hours,
         "purchasePrice": purchase_price,
+        "comparableLowValue": comparable_low_value,
+        "comparableAverageValue": comparable_average_value,
+        "comparableHighValue": comparable_high_value,
+        "desiredMinimumRoiPercent": desired_minimum_roi_percent,
         "location": location,
         "notes": notes,
         "analysis": analysis,

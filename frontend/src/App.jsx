@@ -173,6 +173,10 @@ function App() {
           year: extracted.year ?? '',
           hours: extracted.hours ?? '',
           purchasePrice: extracted.purchasePrice ?? '',
+          comparableLowValue: extracted.comparableLowValue ?? '',
+          comparableAverageValue: extracted.comparableAverageValue ?? '',
+          comparableHighValue: extracted.comparableHighValue ?? '',
+          desiredMinimumRoi: extracted.desiredMinimumRoiPercent ?? '',
           location: extracted.location || '',
           notes: extracted.notes || ''
         });
