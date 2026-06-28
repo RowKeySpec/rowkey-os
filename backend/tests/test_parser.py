@@ -64,7 +64,21 @@ class BaseModel:
 pydantic_module.BaseModel = BaseModel
 sys.modules.setdefault("pydantic", pydantic_module)
 
-from app.main import parse_manual_import
+from app.main import extract_listing_fields, parse_manual_import
+
+
+def test_extract_listing_fields_parses_currency_values():
+    examples = [
+        ("Asking $32,000", 32000.0),
+        ("Price: $32,000", 32000.0),
+        ("$32,000 OBO", 32000.0),
+        ("Selling for 32000", 32000.0),
+        ("$145,000", 145000.0),
+    ]
+
+    for description, expected in examples:
+        extracted = extract_listing_fields(description)
+        assert extracted["purchasePrice"] == expected, description
 
 
 def test_parse_manual_import_accepts_equipment_row():

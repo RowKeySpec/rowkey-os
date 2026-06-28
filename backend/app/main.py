@@ -95,6 +95,21 @@ def _parse_float(value: str | None) -> float | None:
         return None
 
 
+def _extract_currency_value(text: str) -> float | None:
+    patterns = [
+        r"(?:asking|price|listed|cash price|sale price|buy now)\s*(?:is|:|=|-)?\s*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
+        r"\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
+        r"\b(?:selling for|for|price|asking)\s*(?:\$\s*)?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\b",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return _parse_float(match.group(1))
+
+    return None
+
+
 def extract_listing_fields(description: str) -> Dict[str, Any]:
     text = _normalize_text(description or "")
     if not text:
@@ -135,18 +150,7 @@ def extract_listing_fields(description: str) -> Dict[str, Any]:
     if hours_match:
         hours = _parse_int(hours_match.group(1))
 
-    purchase_price = None
-    price_keyword_pattern = re.compile(
-        r"(?:price|asking|listed|cash price|sale price|buy now)\s*(?:is|:|=|-)?\s*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
-        re.IGNORECASE,
-    )
-    price_keyword_match = price_keyword_pattern.search(text)
-    if price_keyword_match:
-        purchase_price = _parse_float(price_keyword_match.group(1))
-    else:
-        currency_matches = re.findall(r"\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)", text)
-        if len(currency_matches) == 1:
-            purchase_price = _parse_float(currency_matches[0])
+    purchase_price = _extract_currency_value(text)
 
     location = None
     location_match = re.search(r"(?:location|located|city)\s*(?:in|:)?\s*([A-Za-z0-9 .,'-]+)", text, re.IGNORECASE)
