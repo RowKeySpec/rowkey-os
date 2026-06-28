@@ -83,6 +83,7 @@ def test_extract_listing_fields_parses_currency_values():
         ("$32,000 OBO", 32000.0),
         ("Selling for 32000", 32000.0),
         ("$145,000", 145000.0),
+        ("Asking 125000", 125000.0),
     ]
 
     for description, expected in examples:
@@ -126,6 +127,26 @@ def test_parse_manual_import_accepts_optional_market_fields():
     assert item["market_value_high"] == 47000.0
     assert item["desired_minimum_roi_percent"] == 15.0
     assert item["desired_min_roi"] == 15.0
+
+
+def test_parse_manual_import_preserves_six_figure_and_labeled_market_values():
+    source = "CAT | 320D | 2018 | 6200 | 125000 | Denver | 3500 | 4500 | 145000 | Clean machine | Low 140000 | Average 150000 | High 160000 | 15%"
+    parsed = parse_manual_import(source)
+
+    assert len(parsed) == 1
+    item = parsed[0]
+    assert item["price"] == 125000.0
+    assert item["total_investment"] == 133000.0
+    assert item["comparable_low_value"] == 140000.0
+    assert item["comparable_average_value"] == 150000.0
+    assert item["comparable_high_value"] == 160000.0
+    assert item["market_value_low"] == 140000.0
+    assert item["market_value_average"] == 150000.0
+    assert item["market_value_high"] == 160000.0
+    assert item["target_offer"] > 0
+    assert item["max_offer"] > 0
+    assert item["walk_away_price"] > 0
+    assert item["negotiation_confidence"] > 0
 
 
 def test_parse_manual_import_accepts_equipment_row():
@@ -193,3 +214,53 @@ def test_save_deal_persists_market_intelligence_metrics():
     assert item["resale_confidence"] == "High"
     assert item["negotiation_confidence"] == 80
     assert item["desired_min_roi"] == 20.0
+
+
+def test_sqlite_round_trip_preserves_market_intelligence_from_parsed_import():
+    clear_deals()
+    parsed = parse_manual_import(
+        "CAT | 320D | 2018 | 6200 | 125000 | Denver | 3500 | 4500 | 145000 | Clean machine | 140000 | 150000 | 160000 | 15"
+    )
+    item = parsed[0]
+    save_deal(
+        {
+            "brand": item["brand"],
+            "model": item["model"],
+            "year": item["year"],
+            "hours": item["hours"],
+            "purchase_price": item["price"],
+            "transport_cost": item["estimated_transport_cost"],
+            "repair_cost": item["estimated_repair_cost"],
+            "estimated_resale": item["estimated_resale_value"],
+            "location": item["location"],
+            "notes": item["notes"],
+            "roi": item["roi_percent"],
+            "recommendation": item["recommendation"],
+            "total_investment": item["total_investment"],
+            "net_profit": item["net_profit"],
+            "market_value_low": item["market_value_low"],
+            "market_value_average": item["market_value_average"],
+            "market_value_high": item["market_value_high"],
+            "target_offer": item["target_offer"],
+            "max_offer": item["max_offer"],
+            "walk_away_price": item["walk_away_price"],
+            "resale_confidence": item["resale_confidence"],
+            "negotiation_confidence": item["negotiation_confidence"],
+            "comparable_low_value": item["comparable_low_value"],
+            "comparable_average_value": item["comparable_average_value"],
+            "comparable_high_value": item["comparable_high_value"],
+            "desired_minimum_roi_percent": item["desired_minimum_roi_percent"],
+        }
+    )
+
+    deals = list_deals()
+    assert len(deals) == 1
+    saved = deals[0]
+    assert saved["price"] == 125000.0
+    assert saved["comparable_low_value"] == 140000.0
+    assert saved["comparable_average_value"] == 150000.0
+    assert saved["comparable_high_value"] == 160000.0
+    assert saved["target_offer"] > 0
+    assert saved["max_offer"] > 0
+    assert saved["walk_away_price"] > 0
+    assert saved["negotiation_confidence"] > 0

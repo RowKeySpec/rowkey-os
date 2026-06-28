@@ -88,7 +88,10 @@ def _parse_int(value: str | None) -> int | None:
 def _parse_float(value: str | None) -> float | None:
     if value is None:
         return None
-    cleaned = value.replace("$", "").replace(",", "").strip()
+    match = re.search(r"[-+]?\d[\d,]*(?:\.\d+)?", value)
+    if not match:
+        return None
+    cleaned = match.group(0).replace(",", "").strip()
     try:
         return float(cleaned)
     except ValueError:
@@ -97,9 +100,9 @@ def _parse_float(value: str | None) -> float | None:
 
 def _extract_currency_value(text: str) -> float | None:
     patterns = [
-        r"(?:asking|price|listed|cash price|sale price|buy now)\s*(?:is|:|=|-)?\s*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
-        r"\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)",
-        r"\b(?:selling for|for|price|asking)\s*(?:\$\s*)?(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\b",
+        r"(?:asking|price|listed|cash price|sale price|buy now)\s*(?:is|:|=|-)?\s*\$?\s*(\d[\d,]*(?:\.\d{1,2})?)",
+        r"\$\s*(\d[\d,]*(?:\.\d{1,2})?)",
+        r"\b(?:selling for|for|price|asking)\s*(?:\$\s*)?(\d[\d,]*(?:\.\d{1,2})?)\b",
     ]
 
     for pattern in patterns:
@@ -318,11 +321,7 @@ def parse_manual_import(source: str) -> List[Dict[str, Any]]:
         title = f"{brand} {model}".strip()
 
         def parse_float(text: str) -> float | None:
-            value = text.replace("$", "").replace(",", "")
-            try:
-                return float(value)
-            except ValueError:
-                return None
+            return _parse_float(text)
 
         def parse_int(text: str) -> int | None:
             try:
