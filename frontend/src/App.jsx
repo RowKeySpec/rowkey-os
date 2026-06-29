@@ -149,6 +149,7 @@ function App() {
   const [status, setStatus] = useState('Analyze a deal to see its projected ROI.');
   const [analysis, setAnalysis] = useState(null);
   const [showManualForm, setShowManualForm] = useState(true);
+  const [expandedListingKey, setExpandedListingKey] = useState(null);
 
   async function loadListings() {
     try {
@@ -446,8 +447,12 @@ function App() {
           {normalizedListings.length === 0 ? (
             <p>No equipment opportunities yet.</p>
           ) : (
-            normalizedListings.map((listing, index) => (
-              <article key={`${listing.title}-${index}`} className="listing-card">
+            normalizedListings.map((listing, index) => {
+              const listingKey = `${listing.title}-${index}`;
+              const isExpanded = expandedListingKey === listingKey;
+
+              return (
+              <article key={listingKey} className="listing-card">
                 <div className="listing-header">
                   <h3>{listing.title}</h3>
                   <span className="score-pill">{listing.recommendation}</span>
@@ -483,135 +488,150 @@ function App() {
                   </div>
                 </div>
 
-                <div className="card-section">
-                  <h4>Main deal info</h4>
-                  <div className="metric-grid">
-                    <div className="metric">
-                      <span>Total investment</span>
-                      <strong>${listing.total_investment?.toLocaleString() ?? listing.total_cost?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Purchase price</span>
-                      <strong>${listing.price?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Expected days to sell</span>
-                      <strong>{listing.expected_days_to_sell ?? 'n/a'}</strong>
-                    </div>
-                  </div>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setExpandedListingKey(isExpanded ? null : listingKey)}
+                  >
+                    {isExpanded ? 'Hide Details' : 'View Details'}
+                  </button>
                 </div>
 
-                <div className="card-section">
-                  <h4>Profit numbers</h4>
-                  <div className="metric-grid">
-                    <div className="metric">
-                      <span>Estimated gross profit</span>
-                      <strong>${listing.estimated_gross_profit?.toLocaleString() ?? 'n/a'}</strong>
+                {isExpanded ? (
+                  <>
+                    <div className="card-section">
+                      <h4>Main deal info</h4>
+                      <div className="metric-grid">
+                        <div className="metric">
+                          <span>Total investment</span>
+                          <strong>${listing.total_investment?.toLocaleString() ?? listing.total_cost?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Purchase price</span>
+                          <strong>${listing.price?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Expected days to sell</span>
+                          <strong>{listing.expected_days_to_sell ?? 'n/a'}</strong>
+                        </div>
+                      </div>
                     </div>
-                    <div className="metric">
-                      <span>Net profit</span>
-                      <strong>${listing.net_profit?.toLocaleString() ?? listing.expected_profit?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>ROI</span>
-                      <strong>{listing.roi_percent ?? 'n/a'}%</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Interest cost</span>
-                      <strong>${listing.interest_cost?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Annualized ROI</span>
-                      <strong>{listing.annualized_roi ?? 'n/a'}%</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Suggested max offer</span>
-                      <strong>${listing.recommended_max_offer?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="card-section">
-                  <h4>Scores</h4>
-                  <div className="metric-grid">
-                    <div className="metric">
-                      <span>Overall score</span>
-                      <strong>{listing.overall_score ?? 'n/a'}/10</strong>
+                    <div className="card-section">
+                      <h4>Profit numbers</h4>
+                      <div className="metric-grid">
+                        <div className="metric">
+                          <span>Estimated gross profit</span>
+                          <strong>${listing.estimated_gross_profit?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Net profit</span>
+                          <strong>${listing.net_profit?.toLocaleString() ?? listing.expected_profit?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>ROI</span>
+                          <strong>{listing.roi_percent ?? 'n/a'}%</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Interest cost</span>
+                          <strong>${listing.interest_cost?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Annualized ROI</span>
+                          <strong>{listing.annualized_roi ?? 'n/a'}%</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Suggested max offer</span>
+                          <strong>${listing.recommended_max_offer?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                      </div>
                     </div>
-                    <div className="metric">
-                      <span>Profit potential</span>
-                      <strong>{listing.profit_potential ?? 'n/a'}/10</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Risk</span>
-                      <strong>{listing.risk ?? 'n/a'}/10</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Repair difficulty</span>
-                      <strong>{listing.repair_difficulty ?? 'n/a'}/10</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Ease of transport</span>
-                      <strong>{listing.ease_of_transport ?? 'n/a'}/10</strong>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="card-section">
-                  <h4>Market Intelligence</h4>
-                  <div className="metric-grid">
-                    <div className="metric">
-                      <span>Market low</span>
-                      <strong>${listing.market_value_low?.toLocaleString() ?? 'n/a'}</strong>
+                    <div className="card-section">
+                      <h4>Scores</h4>
+                      <div className="metric-grid">
+                        <div className="metric">
+                          <span>Overall score</span>
+                          <strong>{listing.overall_score ?? 'n/a'}/10</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Profit potential</span>
+                          <strong>{listing.profit_potential ?? 'n/a'}/10</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Risk</span>
+                          <strong>{listing.risk ?? 'n/a'}/10</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Repair difficulty</span>
+                          <strong>{listing.repair_difficulty ?? 'n/a'}/10</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Ease of transport</span>
+                          <strong>{listing.ease_of_transport ?? 'n/a'}/10</strong>
+                        </div>
+                      </div>
                     </div>
-                    <div className="metric">
-                      <span>Market average</span>
-                      <strong>${listing.market_value_average?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Market high</span>
-                      <strong>${listing.market_value_high?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Target offer</span>
-                      <strong>${listing.target_offer?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Max offer</span>
-                      <strong>${listing.max_offer?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Walk-away price</span>
-                      <strong>${listing.walk_away_price?.toLocaleString() ?? 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Resale confidence</span>
-                      <strong>{listing.resale_confidence || 'n/a'}</strong>
-                    </div>
-                    <div className="metric">
-                      <span>Negotiation confidence</span>
-                      <strong>{listing.negotiation_confidence ?? 'n/a'}%</strong>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="card-section">
-                  <h4>Recommendation</h4>
-                  <div className="metric-grid">
-                    <div className="metric">
-                      <span>Recommendation</span>
-                      <strong>{listing.recommendation || 'n/a'}</strong>
+                    <div className="card-section">
+                      <h4>Market Intelligence</h4>
+                      <div className="metric-grid">
+                        <div className="metric">
+                          <span>Market low</span>
+                          <strong>${listing.market_value_low?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Market average</span>
+                          <strong>${listing.market_value_average?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Market high</span>
+                          <strong>${listing.market_value_high?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Target offer</span>
+                          <strong>${listing.target_offer?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Max offer</span>
+                          <strong>${listing.max_offer?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Walk-away price</span>
+                          <strong>${listing.walk_away_price?.toLocaleString() ?? 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Resale confidence</span>
+                          <strong>{listing.resale_confidence || 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Negotiation confidence</span>
+                          <strong>{listing.negotiation_confidence ?? 'n/a'}%</strong>
+                        </div>
+                      </div>
                     </div>
-                    <div className="metric">
-                      <span>Notes</span>
-                      <strong>{listing.notes || 'n/a'}</strong>
-                    </div>
-                  </div>
-                </div>
 
-                <p className="status">Reasons: {listing.reasons?.join(', ') || 'n/a'}</p>
+                    <div className="card-section">
+                      <h4>Recommendation</h4>
+                      <div className="metric-grid">
+                        <div className="metric">
+                          <span>Recommendation</span>
+                          <strong>{listing.recommendation || 'n/a'}</strong>
+                        </div>
+                        <div className="metric">
+                          <span>Notes</span>
+                          <strong>{listing.notes || 'n/a'}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="status">Reasons: {listing.reasons?.join(', ') || 'n/a'}</p>
+                  </>
+                ) : null}
               </article>
-            ))
+              );
+            })
           )}
         </div>
       </section>
