@@ -629,6 +629,17 @@ def export_listings_csv() -> Any:
 @app.post("/api/listings/import")
 def import_listings(payload: ImportPayload) -> Dict[str, Any]:
     imported: List[Dict[str, Any]] = []
+    structured_fields = {
+        key: value
+        for key, value in payload.__dict__.items()
+        if key not in {"rows", "listings"}
+    }
+
+    if not payload.rows and not payload.listings and not any(structured_fields.values()):
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either rows or listings in the import payload."
+        )
 
     try:
         if payload.rows:
@@ -640,7 +651,7 @@ def import_listings(payload: ImportPayload) -> Dict[str, Any]:
                 if structured_item:
                     imported.append(structured_item)
 
-        root_structured = _parse_structured_listing(payload.model_dump())
+        root_structured = _parse_structured_listing(structured_fields)
         if root_structured:
             imported.append(root_structured)
     except ValueError as exc:

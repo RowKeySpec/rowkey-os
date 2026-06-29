@@ -73,7 +73,7 @@ pydantic_module.BaseModel = BaseModel
 sys.modules.setdefault("pydantic", pydantic_module)
 
 from app.database import clear_deals, list_deals, save_deal
-from app.main import compute_market_intelligence, extract_listing_fields, parse_manual_import, _parse_structured_listing
+from app.main import ImportPayload, compute_market_intelligence, extract_listing_fields, import_listings, parse_manual_import, _parse_structured_listing
 
 
 def test_extract_listing_fields_parses_currency_values():
@@ -344,3 +344,38 @@ def test_legacy_rows_parser_remains_backward_compatible():
     assert item["comparable_average_value"] == 150000.0
     assert item["comparable_high_value"] == 160000.0
     assert item["desired_minimum_roi_percent"] == 15.0
+
+
+def test_import_route_accepts_structured_listings_only_payload():
+    clear_deals()
+    payload = ImportPayload(
+        listings=[
+            {
+                "brand": "CAT",
+                "model": "320D",
+                "year": 2018,
+                "hours": 6200,
+                "purchase_price": 125000,
+                "location": "Denver",
+                "transport_cost": 3500,
+                "repair_cost": 4500,
+                "estimated_resale_value": 145000,
+                "comparable_low_value": 140000,
+                "comparable_average_value": 150000,
+                "comparable_high_value": 160000,
+                "desired_minimum_roi_percent": 15,
+                "notes": "Serviced and ready to work",
+            }
+        ]
+    )
+
+    result = import_listings(payload)
+
+    assert result["imported"] == 1
+    assert result["total"] == 1
+    listing = result["listings"][0]
+    assert listing["price"] == 125000.0
+    assert listing["comparable_low_value"] == 140000.0
+    assert listing["comparable_average_value"] == 150000.0
+    assert listing["comparable_high_value"] == 160000.0
+    assert listing["desired_minimum_roi_percent"] == 15.0
