@@ -114,6 +114,34 @@ function normalizeListing(listing = {}) {
   };
 }
 
+function formatApiError(detail) {
+  if (!detail) {
+    return 'Analysis failed.';
+  }
+
+  if (typeof detail === 'string') {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (!item) return '';
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object') return item.msg || item.message || JSON.stringify(item);
+        return String(item);
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  if (typeof detail === 'object') {
+    return detail.detail || detail.msg || detail.message || JSON.stringify(detail);
+  }
+
+  return String(detail);
+}
+
 function App() {
   const [formData, setFormData] = useState(emptyForm);
   const [listingDescription, setListingDescription] = useState(emptyListingDescription);
@@ -195,26 +223,28 @@ function App() {
     event.preventDefault();
     setStatus('Analyzing deal...');
 
+    const structuredListing = {
+      brand: formData.brand,
+      model: formData.model,
+      year: formData.year || null,
+      hours: formData.hours || null,
+      purchase_price: formData.purchasePrice || null,
+      location: formData.location,
+      transport_cost: formData.transportCost || null,
+      repair_cost: formData.repairCost || null,
+      estimated_resale_value: formData.estimatedResaleValue || null,
+      comparable_low_value: formData.comparableLowValue || null,
+      comparable_average_value: formData.comparableAverageValue || null,
+      comparable_high_value: formData.comparableHighValue || null,
+      desired_minimum_roi_percent: formData.desiredMinimumRoi || null,
+      notes: formData.notes
+    };
+
     try {
       const response = await fetch(`${API_BASE}/listings/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brand: formData.brand,
-          model: formData.model,
-          year: formData.year || null,
-          hours: formData.hours || null,
-          purchase_price: formData.purchasePrice || null,
-          location: formData.location,
-          transport_cost: formData.transportCost || null,
-          repair_cost: formData.repairCost || null,
-          estimated_resale_value: formData.estimatedResaleValue || null,
-          comparable_low_value: formData.comparableLowValue || null,
-          comparable_average_value: formData.comparableAverageValue || null,
-          comparable_high_value: formData.comparableHighValue || null,
-          desired_minimum_roi_percent: formData.desiredMinimumRoi || null,
-          notes: formData.notes
-        })
+        body: JSON.stringify({ listings: [structuredListing] })
       });
       const result = await response.json();
 
@@ -226,7 +256,7 @@ function App() {
         await loadListings();
       } else {
         setAnalysis(null);
-        setStatus(result.detail || 'Analysis failed.');
+        setStatus(formatApiError(result.detail));
       }
     } catch (error) {
       setAnalysis(null);
